@@ -1,6 +1,6 @@
 # lp-api
 
-Consumer easily Liveperson apis using this library.
+Consume easily Liveperson apis using this library.
 
 ## Domains resolution
 
