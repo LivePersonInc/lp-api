@@ -2,13 +2,13 @@
 
 Consumer easily Liveperson apis using this library.
 
-## Domains Resultion
+## Domains resolution
 
 ```java
 domains = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
 ```
 
-## Service apis
+## Services apis
 
 Get instance of the service api endpoint using the ``apiEndpoint`` call.
 Here is an example of getting endpoint for the ``IDP`` service.
