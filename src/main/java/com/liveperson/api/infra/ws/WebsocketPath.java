@@ -20,23 +20,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import java.util.Map;
-import java.util.Optional;
-import com.liveperson.api.infra.GeneralAPI;
-import org.junit.Assert;
-import org.junit.Test;
+package com.liveperson.api.infra.ws;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class DomainsTest {
-    public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
-    public static final String LP_DOMAINS = "https://" + Optional.ofNullable(System.getenv("LP_DOMAINS"))
-            .orElse("adminlogin.liveperson.net");
+@Retention(value = RetentionPolicy.RUNTIME)
+@Target(value = ElementType.TYPE) //can use in method only.
+public @interface WebsocketPath {
+    public String value();
     
-    @Test
-    public void testDomains() {
-        Assert.assertNotNull("LP_ACCOUNT is not set", LP_ACCOUNT);
-        Map<String, String> domains = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
-        Assert.assertTrue(!domains.isEmpty());        
-    }
-
 }

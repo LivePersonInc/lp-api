@@ -10,7 +10,7 @@
     </properties>
     <groupId>com.liveperson.api</groupId>
     <artifactId>lp-api</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
     <inceptionYear>2017</inceptionYear>
     <name>Liveperson API</name>
@@ -46,7 +46,12 @@
             <groupId>com.squareup.retrofit2</groupId>
             <artifactId>converter-jackson</artifactId>
             <version>2.2.0</version>
-        </dependency>        
+        </dependency>
+        <dependency>
+            <groupId>javax.websocket</groupId>
+            <artifactId>javax.websocket-api</artifactId>
+            <version>1.1</version>
+        </dependency>                
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
@@ -66,6 +71,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>javax-websocket-client-impl</artifactId>
+            <version>${jetty.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
@@ -76,6 +87,12 @@
             <artifactId>hamcrest-core</artifactId>
             <version>1.3</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.24</version>
+            <type>jar</type>
         </dependency>
     </dependencies>
     <distributionManagement>
@@ -175,7 +192,7 @@
                     </execution>
                 </executions>
             </plugin>
-<!--            <plugin>
+            <!--            <plugin>
                 <groupId>com.versioneye</groupId>
                 <artifactId>versioneye-maven-plugin</artifactId>
                 <version>3.10.0</version>

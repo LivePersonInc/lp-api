@@ -23,7 +23,10 @@
 package com.liveperson.utils;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GeneralUtils {
     
@@ -42,6 +45,11 @@ public class GeneralUtils {
         T get() throws Exception;
     }
 
+    @FunctionalInterface
+    public interface FunctionCheckException<U,V> {
+        V apply(U u) throws Exception;
+    }
+
     public static <T> Consumer<T> rethrow(ConsumerCheckException<T> c) {
         return t -> {
             try {
@@ -51,7 +59,16 @@ public class GeneralUtils {
             }
         };
     }
-    public static <T> Supplier<T> rethrow(SupplierCheckException<T> c) {
+    public static <U,V> Function<U,V> rethrowF(FunctionCheckException<U,V> f) { 
+        return u -> {
+            try {
+                return f.apply(u);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        };
+    }
+    public static <T> Supplier<T> rethrowS(SupplierCheckException<T> c) {
         return () -> {
             try {
                 return c.get();
@@ -68,5 +85,12 @@ public class GeneralUtils {
                 throw new RuntimeException(ex);
             }
         };
+    }
+    
+    public static void runRethrow(RunnableCheckException r) {
+        rethrowR(r).run();
+    }
+    public static <T> T supplyRethrow(SupplierCheckException<T> s) {
+        return rethrowS(s).get();
     }
 }

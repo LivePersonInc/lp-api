@@ -1,3 +1,4 @@
+
 /**
  * The MIT License
  * Copyright (c) 2017 LivePerson, Inc.
@@ -20,23 +21,45 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+import com.fasterxml.jackson.databind.JsonNode;
+import com.liveperson.api.Idp;
+import static com.liveperson.api.MessagingConsumer.*;
 import java.util.Map;
 import java.util.Optional;
 import com.liveperson.api.infra.GeneralAPI;
+import static com.liveperson.api.infra.ws.TimeoutScheduler.withIn;
+import com.liveperson.api.infra.ws.WebsocketService;
+import java.io.IOException;
+import java.time.Duration;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
-
-public class DomainsTest {
+public class MessagingTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
     public static final String LP_DOMAINS = "https://" + Optional.ofNullable(System.getenv("LP_DOMAINS"))
             .orElse("adminlogin.liveperson.net");
-    
-    @Test
-    public void testDomains() {
-        Assert.assertNotNull("LP_ACCOUNT is not set", LP_ACCOUNT);
-        Map<String, String> domains = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
-        Assert.assertTrue(!domains.isEmpty());        
+    Map<String, String> domains;
+    String jwt;
+
+    @Before
+    public void before() throws IOException {
+        domains = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
+        Assert.assertTrue(!domains.isEmpty());
+        final JsonNode body = GeneralAPI.apiEndpoint(domains, Idp.class)
+                .signup(LP_ACCOUNT)
+                .execute().body();
+        Assert.assertNotNull(body);
+        jwt = body.path("jwt").asText();
+        Assert.assertTrue(!jwt.isEmpty());
     }
 
+    @Test
+    public void testUMS() throws Exception {
+        WebsocketService ums = WebsocketService.create(consumerUrl(domains, LP_ACCOUNT, "wss"));
+        JsonNode resp = ums.request(initConnection(jwt), 
+                withIn(Duration.ofSeconds(5))).get();
+        Assert.assertTrue(resp.path("code").asInt()==200);
+        ums.getWs().close();
+    }
 }
