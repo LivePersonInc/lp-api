@@ -21,7 +21,6 @@
  * THE SOFTWARE.
  */
 
-import static MessagingTest.LP_ACCOUNT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.liveperson.api.Idp;
 import java.util.Map;
