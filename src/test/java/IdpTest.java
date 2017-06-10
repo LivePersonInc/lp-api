@@ -21,13 +21,19 @@
  * THE SOFTWARE.
  */
 
+import static MessagingTest.LP_ACCOUNT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.liveperson.api.Idp;
 import java.util.Map;
 import java.util.Optional;
 import com.liveperson.api.infra.GeneralAPI;
 import java.io.IOException;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyString;
 import org.junit.Assert;
+import static org.junit.Assert.assertThat;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,12 +51,11 @@ public class IdpTest {
     
     @Test
     public void testIdp() throws IOException {
-        final Idp apiEndpoint = GeneralAPI.apiEndpoint(domains, Idp.class);
-        final JsonNode body = apiEndpoint
+        final JsonNode body = GeneralAPI.apiEndpoint(domains, Idp.class)
                 .signup(LP_ACCOUNT)
                 .execute().body();
-        Assert.assertNotNull(body);
-        Assert.assertTrue(!body.path("jwt").asText().isEmpty());
+        assertThat(body, is(not(nullValue())));
+        assertThat(body.path("jwt").asText(), not(isEmptyString()));
     }
 
 }
