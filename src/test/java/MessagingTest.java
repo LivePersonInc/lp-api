@@ -31,9 +31,14 @@ import static com.liveperson.api.infra.ws.TimeoutScheduler.withIn;
 import com.liveperson.api.infra.ws.WebsocketService;
 import java.io.IOException;
 import java.time.Duration;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.text.IsEmptyString.*;
+import static org.hamcrest.collection.IsCollectionWithSize.*;
+import static org.hamcrest.number.OrderingComparison.greaterThan;
+
+import static org.junit.Assert.*;
 
 public class MessagingTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
@@ -45,21 +50,21 @@ public class MessagingTest {
     @Before
     public void before() throws IOException {
         domains = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
-        Assert.assertTrue(!domains.isEmpty());
+        assertThat(domains.keySet(),hasSize(greaterThan(0)));
         final JsonNode body = GeneralAPI.apiEndpoint(domains, Idp.class)
                 .signup(LP_ACCOUNT)
                 .execute().body();
-        Assert.assertNotNull(body);
+        assertThat(body, is(not(nullValue())));
         jwt = body.path("jwt").asText();
-        Assert.assertTrue(!jwt.isEmpty());
+        assertThat(jwt, not(isEmptyString()));
     }
 
     @Test
     public void testUMS() throws Exception {
-        WebsocketService ums = WebsocketService.create(consumerUrl(domains, LP_ACCOUNT, "wss"));
-        JsonNode resp = ums.request(initConnection(jwt), 
-                withIn(Duration.ofSeconds(5))).get();
-        Assert.assertTrue(resp.path("code").asInt()==200);
-        ums.getWs().close();
+        WebsocketService consumer = WebsocketService.create(consumerUrl(domains, LP_ACCOUNT, "wss"));
+        JsonNode resp = consumer.request(initConnection(jwt), 
+                withIn(Duration.ofSeconds(5))).get();        
+        assertThat(resp.path("code").asInt(), is(200));
+        consumer.getWs().close();
     }
 }
