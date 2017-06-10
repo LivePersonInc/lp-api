@@ -1,4 +1,5 @@
 # lp-api
+[![Build Status](https://travis-ci.org/LivePersonInc/lp-api.svg?branch=master)](https://travis-ci.org/LivePersonInc/lp-api)
 
 Consume easily Liveperson apis using this library.
 
