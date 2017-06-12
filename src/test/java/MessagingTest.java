@@ -65,7 +65,8 @@ public class MessagingTest {
     @Test
     public void testUMS() throws Exception {
         CountDownLatch cdl = new CountDownLatch(1);
-        WebsocketService<MessagingConsumer> consumer = WebsocketService.create("wss", domains, LP_ACCOUNT, MessagingConsumer.class);
+        WebsocketService<MessagingConsumer> consumer = 
+                WebsocketService.create("wss", domains, LP_ACCOUNT, MessagingConsumer.class);
 
         consumer.methods().initConnection(OM.createObjectNode().put("jwt", jwt)).get();
         String convId = consumer.methods().consumerRequestConversation().get().path("body").path("conversationId").asText();
