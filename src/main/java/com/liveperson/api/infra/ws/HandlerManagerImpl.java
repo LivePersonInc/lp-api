@@ -44,12 +44,12 @@ public class HandlerManagerImpl<T> implements HandlerManager<T> {
         final Predicate<T> registeredFilter = p -> {
             if (matcher.test(p)) {
                 filter.accept(p);
-                return true;                
+                return false; // do not continue processing
             }
-            return false;
+            return true; // continue processing
         };
         filters.put(matcher,registeredFilter);
-        return registeredFilter;
+        return matcher;
     }
 
     @Override

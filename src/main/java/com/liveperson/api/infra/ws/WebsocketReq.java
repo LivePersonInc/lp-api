@@ -20,35 +20,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.liveperson.api;
+package com.liveperson.api.infra.ws;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.liveperson.api.infra.ServiceName;
-import com.liveperson.api.infra.ws.WebsocketPath;
-import com.liveperson.api.infra.ws.WebsocketReq;
-import java.util.concurrent.CompletableFuture;
-import retrofit2.http.Header;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@ServiceName("asyncMessagingEnt")
-@WebsocketPath("%s://%s/ws_api/account/%s/messaging/consumer?v=3")
-public interface MessagingConsumer {
-
-    @WebsocketReq("GetClock")
-    CompletableFuture<JsonNode> getClock();
-
-    @WebsocketReq("cm.ConsumerRequestConversation")
-    CompletableFuture<JsonNode> consumerRequestConversation();
-
-    @WebsocketReq("InitConnection")
-    CompletableFuture<JsonNode> initConnection(
-            @Header(".ams.headers.ConsumerAuthentication") JsonNode jwtHeader);
-
-    @WebsocketReq("cm.UpdateConversationField")
-    CompletableFuture<JsonNode> updateConversationField(JsonNode body);
-
-    @WebsocketReq("ms.PublishEvent")
-    CompletableFuture<JsonNode> publishEvent(JsonNode body);
-
-    @WebsocketReq("ms.SubscribeMessagingEvents")
-    CompletableFuture<JsonNode> subscribeMessagingEvents(JsonNode body);
+@Retention(value = RetentionPolicy.RUNTIME)
+@Target(value = ElementType.METHOD) //can use in method only.
+public @interface WebsocketReq {
+    public String value();
+    
 }

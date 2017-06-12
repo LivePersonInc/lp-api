@@ -24,6 +24,7 @@ package com.liveperson.api.infra;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.liveperson.api.infra.ws.WebsocketPath;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
@@ -42,13 +43,12 @@ public class GeneralAPI {
         Call<JsonNode> baseURI(@Path("account") String account);
     }
 
-
     public static final Stream<JsonNode> iteratorToStream(final Iterator<JsonNode> elements) {
         Iterable<JsonNode> iterable = () -> elements;
         return StreamSupport.stream(iterable.spliterator(), false);
     }
 
-    public static Map<String, String> getDomains(final String LP_DOMAINS, final String account) {        
+    public static Map<String, String> getDomains(final String LP_DOMAINS, final String account) {
         try {
             return iteratorToStream(apiEndPoint(LP_DOMAINS, CSDS.class)
                     .baseURI(account)
