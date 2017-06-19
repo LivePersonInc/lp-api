@@ -134,7 +134,7 @@ public final class WebsocketService<U> {
     }
 
     public CompletableFuture<JsonNode> request(ObjectNode reqMsg) {
-        return request(reqMsg, withIn(Duration.ofSeconds(3)));
+        return request(reqMsg, withIn(Duration.ofSeconds(10)));
     }
 
     public CompletableFuture<JsonNode> request(ObjectNode reqMsg, final CompletableFuture<Void> withIn) {
