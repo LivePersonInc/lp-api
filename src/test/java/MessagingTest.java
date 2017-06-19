@@ -24,8 +24,8 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import static com.google.common.collect.ImmutableMap.of;
 import com.liveperson.api.Idp;
-//import static com.liveperson.api.MessagingConsumer.*;
 import java.util.Map;
 import java.util.Optional;
 import com.liveperson.api.infra.GeneralAPI;
@@ -65,14 +65,13 @@ public class MessagingTest {
     @Test
     public void testUMS() throws Exception {
         CountDownLatch cdl = new CountDownLatch(1);
-        WebsocketService<MessagingConsumer> consumer = 
-                WebsocketService.create("wss", domains, LP_ACCOUNT, MessagingConsumer.class);
+        WebsocketService<MessagingConsumer> consumer = WebsocketService.create(MessagingConsumer.class,
+                of("protocol", "wss", "account", LP_ACCOUNT), domains);
 
         consumer.methods().initConnection(OM.createObjectNode().put("jwt", jwt)).get();
         String convId = consumer.methods().consumerRequestConversation().get().path("body").path("conversationId").asText();
 
-        consumer.on(m -> m.path("type").asText().equals("ms.MessagingEventNotification"), x -> {
-            System.out.println("NOTIF: " + x);
+        consumer.methods().onMessagingEventNotification(x -> {
             if (x.findPath("message").asText().equals("hello"))
                 cdl.countDown();
         });

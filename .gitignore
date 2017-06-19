@@ -12,3 +12,5 @@ buildNumber.properties
 !/.mvn/wrapper/maven-wrapper.jar
 
 nbactions.xml
+
+src/test/java/AgentTest.java

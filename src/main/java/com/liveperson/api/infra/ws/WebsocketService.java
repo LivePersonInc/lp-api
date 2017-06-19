@@ -34,6 +34,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,29 +54,54 @@ import retrofit2.http.Header;
 
 public final class WebsocketService<U> {
     private final Logger LOG = LoggerFactory.getLogger(WebsocketService.class);
-    public static <U> WebsocketService create(final String uri, Class<U> methodsClz) {
+    /**
+     * Instantiate Connection based on the URL format given in the WebsocketPath
+     * annotation.
+     *
+     * @param <U> Methods Class Type
+     * @param methodsClz
+     * @param params
+     * @return
+     */
+    public static <U> WebsocketService<U> create(Class<U> methodsClz, Map<String, String> params) {
+        WebsocketPath websocketPath = methodsClz.getAnnotation(WebsocketPath.class);
+        if (websocketPath != null)
+            return WebsocketService.create(methodsClz, replaceParams(websocketPath.value(), params));
+        throw new RuntimeException("Missing annotations on class " + methodsClz.getName());
+    }
+
+    /**
+     * Instantiate Connection based on the domain given in the ServiceName
+     * annotation and URL format given in the WebsocketPath annotation.
+     *
+     * @param <U>
+     * @param methodsClz
+     * @param params
+     * @param domains
+     * @return
+     */
+    public static <U> WebsocketService<U> create(Class<U> methodsClz, Map<String, String> params, Map<String, String> domains) {
+        ServiceName serviceName = methodsClz.getAnnotation(ServiceName.class);
+        if (serviceName != null) {
+            HashMap<String, String> paramsWithDomain = new HashMap<>(params.size() + 1);
+            paramsWithDomain.putAll(params);
+            paramsWithDomain.put("domain", domains.get(serviceName.value()));
+            return WebsocketService.create(methodsClz, paramsWithDomain);
+        }
+        throw new RuntimeException("Missing annotations on class " + methodsClz.getName());
+    }
+
+    public static <U> WebsocketService<U> create(Class<U> methodsClz, final String uri) {
         HandlerManagerImpl<JsonNode> fm = new HandlerManagerImpl<>();
         return supplyRethrow(()
                 -> new WebsocketService(WEB_SOCKET_CONTAINER.connectToServer(new MyIntEP(fm.filter()), null, URI.create(uri)), fm, methodsClz));
     }
-    public static <U> WebsocketService create(final String protocol, final Map<String, String> DOMAINS, final String account, Class<U> methodsClz) {
-        ServiceName serviceName = methodsClz.getAnnotation(ServiceName.class);
-        if (serviceName != null) 
-            return create(protocol, DOMAINS.get(serviceName.value()), account, methodsClz);
-        throw new RuntimeException("Missing annotations on class " + methodsClz.getName());
-    }
 
-    public static <U> WebsocketService create(final String protocol, final String domain, final String account, Class<U> methodsClz) {
-        ServiceName serviceName = methodsClz.getAnnotation(ServiceName.class);
-        WebsocketPath websocketPath = methodsClz.getAnnotation(WebsocketPath.class);
-        if (serviceName != null && websocketPath != null) 
-            return create(String.format(websocketPath.value(), protocol, domain, account), methodsClz);
-        throw new RuntimeException("Missing annotations on class " + methodsClz.getName());
-    }
     private final U methods;
+    private final String name;
 
     public void send(JsonNode msg) {
-        LOG.info("SEND: " + msg);
+        LOG.info("{}:SEND: {}", name, msg);
         runRethrow(()
                 -> ws.getAsyncRemote().sendText(OM.writeValueAsString(msg)));
     }
@@ -94,10 +120,13 @@ public final class WebsocketService<U> {
             if (fm.unRegister(matcher) != null)
                 cf.completeExceptionally(new TimeoutException());
         });
+        final long start = System.nanoTime();
         fm.register(matcher, m -> {
             if (fm.unRegister(matcher) != null) {
                 timeout.cancel(true);
-                LOG.info("RECV: " + m);
+                Duration latancy = Duration.ofNanos(System.nanoTime() - start);
+//                LOG.info(format("RECV (%d ms): %s", latancy.toMillis(), m));
+                LOG.info("{}:RECV ({} ms): {}", name, latancy.toMillis(), m);
                 cf.complete(m);
             }
         });
@@ -115,7 +144,7 @@ public final class WebsocketService<U> {
     }
 
     public CompletableFuture<JsonNode> request(String type, Optional<JsonNode> body, Optional<ArrayNode> headers, final CompletableFuture<Void> withIn) {
-        ObjectNode msg = OM.createObjectNode().put("type", type);
+        ObjectNode msg = OM.createObjectNode().put("type", type).put("kind", "req");
         body.ifPresent(b -> msg.put("body", b));
         headers.ifPresent(b -> msg.put("headers", b));
         return request(msg, withIn);
@@ -217,4 +246,10 @@ public final class WebsocketService<U> {
     protected final Session ws;
     protected final HandlerManager<JsonNode> fm;
 
+    private static String replaceParams(String template, Map<String, String> params) {
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            template = template.replaceFirst(String.format("\\{%s\\}", entry.getKey()), entry.getValue());
+        }
+        return template;
+    }
 }

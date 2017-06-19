@@ -33,7 +33,7 @@ import java.util.function.Predicate;
 import retrofit2.http.Header;
 
 @ServiceName("asyncMessagingEnt")
-@WebsocketPath("%s://%s/ws_api/account/%s/messaging/consumer?v=3")
+@WebsocketPath("{protocol}://{domain}/ws_api/account/{account}/messaging/consumer?v=3")
 public interface MessagingConsumer {
 
     @WebsocketReq("GetClock")
