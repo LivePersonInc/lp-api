@@ -1,3 +1,5 @@
+package com.liveperson.api;
+
 /**
  * The MIT License
  * Copyright (c) 2017 LivePerson, Inc.
@@ -22,7 +24,6 @@
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.liveperson.api.Idp;
 import java.util.Map;
 import java.util.Optional;
 import com.liveperson.api.infra.GeneralAPI;

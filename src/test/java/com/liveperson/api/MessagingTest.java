@@ -1,3 +1,5 @@
+package com.liveperson.api;
+
 
 /**
  * The MIT License
@@ -25,7 +27,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import static com.google.common.collect.ImmutableMap.of;
-import com.liveperson.api.Idp;
 import java.util.Map;
 import java.util.Optional;
 import com.liveperson.api.infra.GeneralAPI;
@@ -39,7 +40,6 @@ import static org.hamcrest.collection.IsCollectionWithSize.*;
 import static org.hamcrest.number.OrderingComparison.greaterThan;
 
 import static org.junit.Assert.*;
-import com.liveperson.api.MessagingConsumer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 

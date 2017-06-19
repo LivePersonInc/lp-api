@@ -125,7 +125,6 @@ public final class WebsocketService<U> {
             if (fm.unRegister(matcher) != null) {
                 timeout.cancel(true);
                 Duration latancy = Duration.ofNanos(System.nanoTime() - start);
-//                LOG.info(format("RECV (%d ms): %s", latancy.toMillis(), m));
                 LOG.info("{}:RECV ({} ms): {}", name, latancy.toMillis(), m);
                 cf.complete(m);
             }

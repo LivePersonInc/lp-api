@@ -1,3 +1,5 @@
+package com.liveperson.api.infra.ws;
+
 /**
  * The MIT License
  * Copyright (c) 2017 LivePerson, Inc.

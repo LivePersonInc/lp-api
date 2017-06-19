@@ -14,3 +14,4 @@ buildNumber.properties
 nbactions.xml
 
 src/test/java/AgentTest.java
+/src/test/java/com/liveperson/api/AgentTest.java
