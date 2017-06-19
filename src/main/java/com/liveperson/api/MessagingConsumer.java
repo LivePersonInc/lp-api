@@ -24,9 +24,12 @@ package com.liveperson.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.liveperson.api.infra.ServiceName;
+import com.liveperson.api.infra.ws.WebsocketNotification;
 import com.liveperson.api.infra.ws.WebsocketPath;
 import com.liveperson.api.infra.ws.WebsocketReq;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import retrofit2.http.Header;
 
 @ServiceName("asyncMessagingEnt")
@@ -51,4 +54,10 @@ public interface MessagingConsumer {
 
     @WebsocketReq("ms.SubscribeMessagingEvents")
     CompletableFuture<JsonNode> subscribeMessagingEvents(JsonNode body);
+
+    @WebsocketNotification("ms.MessagingEventNotification")
+    Predicate<JsonNode> onMessagingEventNotification(Consumer<JsonNode> cb);
+
+    @WebsocketNotification("cqm.ExConversationChangeNotification")
+    Predicate<JsonNode> onExConversationChangeNotification(Consumer<JsonNode> cb);
 }

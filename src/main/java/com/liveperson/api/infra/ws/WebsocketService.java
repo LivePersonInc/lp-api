@@ -143,6 +143,35 @@ public final class WebsocketService<U> {
                                 headers.size() == 0 ? Optional.empty() : Optional.of(headers),
                                 withIn(Duration.ofSeconds(3)));
                     }
+                    WebsocketNotification websocketNofif = method.getAnnotation(WebsocketNotification.class);
+                    if (websocketNofif != null) {
+//                        Parameter[] parameters = method.getParameters();
+//                        for (int i = 0; i < parameters.length; i++) {
+//                            Parameter p = parameters[i];
+//                            System.out.println(p);
+//                            System.out.println(args[i]);  
+//                        }
+                        Consumer<JsonNode> cb = (Consumer<JsonNode>) args[0];
+                        return on(m -> m.path("type").asText().equals(websocketNofif.value()), m -> {
+                            LOG.info("{}:NOTIF {}", name, m);
+                            cb.accept(m);
+                        });
+//                        Optional<JsonNode> body = Optional.empty();
+//                        ArrayNode headers = OM.createArrayNode();
+//                        Parameter[] parameters = method.getParameters();
+//                        for (int i = 0; i < parameters.length; i++) {
+//                            Parameter p = parameters[i];
+//                            Header header = p.getAnnotation(Header.class);
+//                            if (header != null) {
+//                                headers.add(((ObjectNode) args[i]).put("type", header.value()));
+//                            } else {
+//                                body = Optional.of((JsonNode) args[i]);
+//                            }
+//                        }
+//                        return request(websocketReq.value(), body,
+//                                headers.size() == 0 ? Optional.empty() : Optional.of(headers),
+//                                withIn(Duration.ofSeconds(3)));
+                    }
                     throw new RuntimeException("Method is not annotated with " + WebsocketReq.class.getName());
                 });
     }
@@ -171,6 +200,7 @@ public final class WebsocketService<U> {
         this.ws = ws;
         this.fm = fm;
         this.methods = caller(clz);
+        this.name = clz.getSimpleName();
     }
 
     public Session getWs() {
