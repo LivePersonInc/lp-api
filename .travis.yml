@@ -1,7 +1,6 @@
 sudo: false
-install: mvn install -DskipTests=true -Dgpg.skip=true
 language: java
 jdk:
   - oraclejdk8
-# after_success:
-  # - mvn clean test # jacoco:report coveralls:report versioneye:update
+install: mvn install -DskipTests=true -Dgpg.skip=true
+script: mvn test -B -DexcludedGroups=com.liveperson.api.infra.ws.SlowTests

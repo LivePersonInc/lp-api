@@ -36,6 +36,19 @@
         <connection>scm:git:https://github.com/LivePersonInc/lp-api.git</connection>
         <developerConnection>scm:git:https://github.com/LivePersonInc/lp-api.git</developerConnection>
     </scm>
+    
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-bom</artifactId>
+                <version>${dropwizard.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+        
     <dependencies>
         <dependency>
             <groupId>com.squareup.retrofit2</groupId>
@@ -55,15 +68,25 @@
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
-            <version>3.2.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.24</version>
             <type>jar</type>
         </dependency>
+        
+        <dependency>
+            <groupId>com.liveperson</groupId>
+            <artifactId>dropwizard-websockets</artifactId>
+            <version>${dropwizard.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-core</artifactId>
+            <scope>test</scope>
+        </dependency>        
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
             <artifactId>javax-websocket-client-impl</artifactId>
