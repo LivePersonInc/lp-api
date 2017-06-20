@@ -29,10 +29,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import static com.google.common.collect.ImmutableMap.of;
 import com.google.common.util.concurrent.RateLimiter;
 import java.io.IOException;
-import org.junit.Before;
 import org.junit.Test;
 import com.liveperson.api.infra.ws.helper.MyApp;
-import io.dropwizard.util.Duration;
 import static io.dropwizard.util.Duration.seconds;
 import static java.lang.System.nanoTime;
 import java.util.concurrent.CompletableFuture;
@@ -59,7 +57,7 @@ public class WsTest {
     }
 
     @Test
-    public void testAgent() throws Exception {
+    public void testFastRequests() throws Exception {
         WebsocketService<TestMethods> connection = WebsocketService.create(TestMethods.class,
                 of("domain", "localhost:48080"));
 
@@ -80,12 +78,20 @@ public class WsTest {
                             metrics.meter("recv").mark();
                     });
         }
-        phaser.arriveAndDeregister(); // deregister the manger thread
+        phaser.arriveAndDeregister(); // deregister the managing thread
         phaser.awaitAdvanceInterruptibly(0, 10, SECONDS); // wait for the tasks
         metrics.getMeters().entrySet()
                 .forEach(e -> System.out.printf("%s:%d-%f\n", e.getKey(), e.getValue().getCount(), e.getValue().getMeanRate()));
         connection.getWs().close();
     }
+
+    @WebsocketPath("ws://{domain}/annotated-ws")
+    public interface TestMethods {
+
+        @WebsocketReq("generic")
+        CompletableFuture<JsonNode> generic(JsonNode body);
+    }
+
     public static ObjectNode createBody() {
         final ObjectNode body = OM.createObjectNode();
         body.putObject("resp").put("type", "genericResponse");
@@ -93,12 +99,4 @@ public class WsTest {
     }
 
     static ObjectMapper OM = new ObjectMapper();
-
-    @WebsocketPath("ws://{domain}/annotated-ws")
-    public interface TestMethods {
-
-        @WebsocketReq("generic")
-        CompletableFuture<JsonNode> generic(JsonNode body);
-
-    }
 }
