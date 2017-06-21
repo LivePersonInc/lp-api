@@ -104,7 +104,7 @@ public final class WebsocketService<U> {
     private final String name;
 
     public void send(JsonNode msg) {
-        LOG.info("{}:SEND: {}", name, msg);
+        LOG.debug("{}:SEND: {}", name, msg);
         runRethrow(()
                 -> ws.getAsyncRemote().sendText(OM.writeValueAsString(msg)));
     }
@@ -128,7 +128,7 @@ public final class WebsocketService<U> {
             if (fm.unRegister(matcher) != null) {
                 timeout.cancel(true);
                 Duration latancy = Duration.ofNanos(System.nanoTime() - start);
-                LOG.info("{}:RECV ({} ms): {}", name, latancy.toMillis(), m);
+                LOG.debug("{}:RECV ({} ms): {}", name, latancy.toMillis(), m);
                 cf.complete(m);
             }
         });
@@ -172,36 +172,16 @@ public final class WebsocketService<U> {
                         }
                         return request(websocketReq.value(), body,
                                 headers.size() == 0 ? Optional.empty() : Optional.of(headers),
-                                withIn(Duration.ofSeconds(3)));
+                                withIn(Duration.ofSeconds(10)));
                     }
-                    WebsocketNotification websocketNofif = method.getAnnotation(WebsocketNotification.class);
-                    if (websocketNofif != null) {
-//                        Parameter[] parameters = method.getParameters();
-//                        for (int i = 0; i < parameters.length; i++) {
-//                            Parameter p = parameters[i];
-//                            System.out.println(p);
-//                            System.out.println(args[i]);  
-//                        }
+
+                    WebsocketNotification websocketNotif = method.getAnnotation(WebsocketNotification.class);
+                    if (websocketNotif != null) {
                         Consumer<JsonNode> cb = (Consumer<JsonNode>) args[0];
-                        return on(m -> m.path("type").asText().equals(websocketNofif.value()), m -> {
-                            LOG.info("{}:NOTIF {}", name, m);
+                        return on(m -> m.path("type").asText().equals(websocketNotif.value()), m -> {
+                            LOG.debug("{}:NOTIF {}", name, m);
                             cb.accept(m);
                         });
-//                        Optional<JsonNode> body = Optional.empty();
-//                        ArrayNode headers = OM.createArrayNode();
-//                        Parameter[] parameters = method.getParameters();
-//                        for (int i = 0; i < parameters.length; i++) {
-//                            Parameter p = parameters[i];
-//                            Header header = p.getAnnotation(Header.class);
-//                            if (header != null) {
-//                                headers.add(((ObjectNode) args[i]).put("type", header.value()));
-//                            } else {
-//                                body = Optional.of((JsonNode) args[i]);
-//                            }
-//                        }
-//                        return request(websocketReq.value(), body,
-//                                headers.size() == 0 ? Optional.empty() : Optional.of(headers),
-//                                withIn(Duration.ofSeconds(3)));
                     }
                     throw new RuntimeException("Method is not annotated with " + WebsocketReq.class.getName());
                 });
