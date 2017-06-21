@@ -24,9 +24,9 @@ package com.liveperson.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.liveperson.api.infra.ServiceName;
-import com.liveperson.api.infra.ws.WebsocketNotification;
-import com.liveperson.api.infra.ws.WebsocketPath;
-import com.liveperson.api.infra.ws.WebsocketReq;
+import com.liveperson.api.infra.ws.annotations.WebsocketNotification;
+import com.liveperson.api.infra.ws.annotations.WebsocketPath;
+import com.liveperson.api.infra.ws.annotations.WebsocketReq;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
