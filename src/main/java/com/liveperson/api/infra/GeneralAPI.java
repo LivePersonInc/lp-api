@@ -24,7 +24,7 @@ package com.liveperson.api.infra;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.liveperson.api.infra.ws.WebsocketPath;
+import com.liveperson.api.infra.ws.annotations.WebsocketPath;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
