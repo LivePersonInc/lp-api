@@ -31,13 +31,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.io.Resources;
 import io.dropwizard.Application;
 import io.dropwizard.Configuration;
-import io.dropwizard.lifecycle.ServerLifecycleListener;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.websockets.GeneralUtils;
 import io.dropwizard.websockets.WebsocketBundle;
-import org.eclipse.jetty.util.component.AbstractLifeCycle;
-import org.eclipse.jetty.util.component.LifeCycle;
 
 import javax.servlet.ServletException;
 import javax.websocket.*;
