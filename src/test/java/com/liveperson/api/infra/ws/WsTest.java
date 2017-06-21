@@ -22,6 +22,10 @@
  */
 package com.liveperson.api.infra.ws;
 
+import com.liveperson.api.infra.ws.annotations.WebsocketPath;
+import com.liveperson.api.infra.ws.annotations.WebsocketReq;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,14 +37,20 @@ import org.junit.Test;
 import com.liveperson.api.infra.ws.helper.MyApp;
 import static io.dropwizard.util.Duration.seconds;
 import static java.lang.System.nanoTime;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
+import org.slf4j.LoggerFactory;
 
 @Category(SlowTests.class)
 public class WsTest {
@@ -49,6 +59,7 @@ public class WsTest {
     @BeforeClass
     public static void before() throws IOException, InterruptedException, ExecutionException {
         server = MyApp.start().get();
+        ((Logger)LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
     }
 
     @AfterClass
@@ -69,7 +80,7 @@ public class WsTest {
             phaser.register();
             rl.acquire();
             metrics.meter("send").mark();
-            connection.methods().generic(createBody())
+            connection.methods().myRequest(createBody())
                     .whenComplete((resp, exp) -> {
                         phaser.arrive();
                         if (exp != null)
@@ -85,11 +96,54 @@ public class WsTest {
         connection.getWs().close();
     }
 
+    @Test
+    public void testMultipleConnections() throws Exception {
+        final int CONNECTION_RATE = 50;
+        final int CONNECTIONS_NUM = 100;
+
+        ExecutorService es = Executors.newFixedThreadPool(10);
+        final BlockingQueue<WebsocketService<TestMethods>> q = new LinkedBlockingQueue<>();
+
+        RateLimiter rlConnect = RateLimiter.create(CONNECTION_RATE);
+        for (int i = 0; i < CONNECTIONS_NUM; i++) {
+            rlConnect.acquire();
+            es.execute(() -> {
+                q.add(WebsocketService.create(TestMethods.class,
+                        of("domain", "localhost:48080")));
+            });
+        }
+
+        Phaser phaser = new Phaser(1); //register also the managing thread.
+        RateLimiter rl = RateLimiter.create(100);
+        MetricRegistry metrics = new MetricRegistry();
+        long end = seconds(3).toNanoseconds() + nanoTime();
+        while (nanoTime() < end) {
+            WebsocketService<TestMethods> connection = q.poll(3, SECONDS);
+            phaser.register();
+            rl.acquire();
+            metrics.meter("send").mark();
+            connection.methods().myRequest(createBody())
+                    .whenComplete((resp, exp) -> {
+                        phaser.arrive();
+                        if (exp != null)
+                            metrics.meter("exp:" + exp.getClass().getSimpleName()).mark();
+                        if (resp != null)
+                            metrics.meter("recv").mark();
+                    });
+            q.add(connection);
+        }
+        phaser.arriveAndDeregister(); // deregister the managing thread
+        phaser.awaitAdvanceInterruptibly(0, 10, SECONDS); // wait for the tasks
+        metrics.getMeters().entrySet()
+                .forEach(e -> System.out.printf("%s:%d-%f\n", e.getKey(), e.getValue().getCount(), e.getValue().getMeanRate()));
+
+    }
+
     @WebsocketPath("ws://{domain}/annotated-ws")
     public interface TestMethods {
 
-        @WebsocketReq("generic")
-        CompletableFuture<JsonNode> generic(JsonNode body);
+        @WebsocketReq("MyRequest")
+        CompletableFuture<JsonNode> myRequest(JsonNode body);
     }
 
     public static ObjectNode createBody() {
