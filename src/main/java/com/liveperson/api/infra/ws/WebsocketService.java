@@ -22,6 +22,9 @@
  */
 package com.liveperson.api.infra.ws;
 
+import com.liveperson.api.infra.ws.annotations.WebsocketPath;
+import com.liveperson.api.infra.ws.annotations.WebsocketNotification;
+import com.liveperson.api.infra.ws.annotations.WebsocketReq;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;

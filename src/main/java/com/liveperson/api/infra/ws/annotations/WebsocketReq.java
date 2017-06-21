@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.liveperson.api.infra.ws;
+package com.liveperson.api.infra.ws.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
