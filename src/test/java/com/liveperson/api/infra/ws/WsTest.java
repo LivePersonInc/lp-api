@@ -39,7 +39,6 @@ import static io.dropwizard.util.Duration.seconds;
 import static java.lang.System.nanoTime;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

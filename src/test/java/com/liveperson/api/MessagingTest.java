@@ -23,6 +23,8 @@ package com.liveperson.api;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -42,6 +44,7 @@ import static org.hamcrest.number.OrderingComparison.greaterThan;
 import static org.junit.Assert.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.LoggerFactory;
 
 public class MessagingTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
@@ -52,6 +55,8 @@ public class MessagingTest {
 
     @Before
     public void before() throws IOException {
+        ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
+//        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
         domains = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
         assertThat(domains.keySet(), hasSize(greaterThan(0)));
         final JsonNode body = GeneralAPI.apiEndpoint(domains, Idp.class)
