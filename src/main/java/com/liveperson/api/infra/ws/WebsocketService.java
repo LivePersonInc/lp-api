@@ -104,7 +104,7 @@ public final class WebsocketService<U> {
     private final String name;
 
     public void send(JsonNode msg) {
-        LOG.debug("{}:SEND: {}", name, msg);
+        LOG.debug("{}-{}:SEND: {}", name, getWs().getId(), msg);
         runRethrow(()
                 -> ws.getAsyncRemote().sendText(OM.writeValueAsString(msg)));
     }
@@ -128,7 +128,7 @@ public final class WebsocketService<U> {
             if (fm.unRegister(matcher) != null) {
                 timeout.cancel(true);
                 Duration latancy = Duration.ofNanos(System.nanoTime() - start);
-                LOG.debug("{}:RECV ({} ms): {}", name, latancy.toMillis(), m);
+                LOG.debug("{}-{}:RECV ({} ms): {}", name, getWs().getId(), latancy.toMillis(), m);
                 cf.complete(m);
             }
         });
