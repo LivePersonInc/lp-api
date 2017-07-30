@@ -44,7 +44,6 @@ public class HandlerManagerImpl<T> implements HandlerManager<T> {
         final Predicate<T> registeredFilter = p -> {
             if (matcher.test(p)) {
                 filter.accept(p);
-                return false; // do not continue processing
             }
             return true; // continue processing
         };
