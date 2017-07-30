@@ -24,18 +24,19 @@ package com.liveperson.api.infra;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.liveperson.api.infra.ws.annotations.WebsocketPath;
+import okhttp3.OkHttpClient;
+import retrofit2.Call;
+import retrofit2.Retrofit;
+import retrofit2.converter.jackson.JacksonConverterFactory;
+import retrofit2.http.GET;
+import retrofit2.http.Path;
+
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import retrofit2.Call;
-import retrofit2.Retrofit;
-import retrofit2.converter.jackson.JacksonConverterFactory;
-import retrofit2.http.GET;
-import retrofit2.http.Path;
 
 public class GeneralAPI {
     public interface CSDS {
@@ -59,11 +60,16 @@ public class GeneralAPI {
             throw new RuntimeException(ex);
         }
     }
-    public static <T> T apiEndPoint(final String baseUrl, final Class<T> clz) {
+    public  static <T> T apiEndPoint(final String baseUrl, final Class<T> clz,OkHttpClient client) {
         return new Retrofit.Builder()
                 .baseUrl(baseUrl)
+                .client(client)
                 .addConverterFactory(JacksonConverterFactory.create())
                 .build().create(clz);
+    }
+    public static <T> T apiEndPoint(final String baseUrl, final Class<T> clz) {
+        return apiEndPoint(baseUrl,clz, new OkHttpClient());
+
     }
 
     public static <T> T apiEndpoint(final Map<String, String> domains, final Class<T> clz) {

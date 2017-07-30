@@ -27,10 +27,11 @@ import com.liveperson.api.infra.ServiceName;
 import com.liveperson.api.infra.ws.annotations.WebsocketNotification;
 import com.liveperson.api.infra.ws.annotations.WebsocketPath;
 import com.liveperson.api.infra.ws.annotations.WebsocketReq;
+import retrofit2.http.Header;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import retrofit2.http.Header;
 
 @ServiceName("asyncMessagingEnt")
 @WebsocketPath("{protocol}://{domain}/ws_api/account/{account}/messaging/consumer?v=3")
@@ -54,6 +55,12 @@ public interface MessagingConsumer {
 
     @WebsocketReq("ms.SubscribeMessagingEvents")
     CompletableFuture<JsonNode> subscribeMessagingEvents(JsonNode body);
+
+    @WebsocketReq("cqm.SubscribeExConversations")
+    CompletableFuture<JsonNode> subscribeExConversationEvents(JsonNode body);
+
+    @WebsocketReq("cqm.UnsubscribeExConversations")
+    CompletableFuture<JsonNode> unsubscribeExConversationEvents(JsonNode body);
 
     @WebsocketNotification("ms.MessagingEventNotification")
     Predicate<JsonNode> onMessagingEventNotification(Consumer<JsonNode> cb);

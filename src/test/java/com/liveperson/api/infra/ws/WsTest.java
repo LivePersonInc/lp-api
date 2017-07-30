@@ -22,34 +22,30 @@
  */
 package com.liveperson.api.infra.ws;
 
-import com.liveperson.api.infra.ws.annotations.WebsocketPath;
-import com.liveperson.api.infra.ws.annotations.WebsocketReq;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import static com.google.common.collect.ImmutableMap.of;
 import com.google.common.util.concurrent.RateLimiter;
-import java.io.IOException;
-import org.junit.Test;
+import com.liveperson.api.infra.ws.annotations.WebsocketPath;
+import com.liveperson.api.infra.ws.annotations.WebsocketReq;
 import com.liveperson.api.infra.ws.helper.MyApp;
-import static io.dropwizard.util.Duration.seconds;
-import static java.lang.System.nanoTime;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Phaser;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.concurrent.*;
+
+import static com.google.common.collect.ImmutableMap.of;
+import static io.dropwizard.util.Duration.seconds;
+import static java.lang.System.nanoTime;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Category(SlowTests.class)
 public class WsTest {
@@ -69,7 +65,7 @@ public class WsTest {
     @Test
     public void testFastRequests() throws Exception {
         WebsocketService<TestMethods> connection = WebsocketService.create(TestMethods.class,
-                of("domain", "localhost:48080"));
+                of("domain", "localhost:48080"),10);
 
         Phaser phaser = new Phaser(1); //register also the managing thread.
         RateLimiter rl = RateLimiter.create(100);
@@ -108,7 +104,7 @@ public class WsTest {
             rlConnect.acquire();
             es.execute(() -> {
                 q.add(WebsocketService.create(TestMethods.class,
-                        of("domain", "localhost:48080")));
+                        of("domain", "localhost:48080"),10));
             });
         }
 

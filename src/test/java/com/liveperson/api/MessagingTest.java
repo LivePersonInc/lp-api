@@ -23,28 +23,31 @@ package com.liveperson.api;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import static com.google.common.collect.ImmutableMap.of;
-import java.util.Map;
-import java.util.Optional;
 import com.liveperson.api.infra.GeneralAPI;
 import com.liveperson.api.infra.ws.WebsocketService;
-import java.io.IOException;
 import org.junit.Before;
 import org.junit.Test;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.text.IsEmptyString.*;
-import static org.hamcrest.collection.IsCollectionWithSize.*;
-import static org.hamcrest.number.OrderingComparison.greaterThan;
+import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.LoggerFactory;
+
+import static com.google.common.collect.ImmutableMap.of;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.hamcrest.number.OrderingComparison.greaterThan;
+import static org.hamcrest.text.IsEmptyString.isEmptyString;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class MessagingTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
@@ -71,7 +74,7 @@ public class MessagingTest {
     public void testUMS() throws Exception {
         CountDownLatch cdl = new CountDownLatch(1);
         WebsocketService<MessagingConsumer> consumer = WebsocketService.create(MessagingConsumer.class,
-                of("protocol", "wss", "account", LP_ACCOUNT), domains);
+                of("protocol", "wss", "account", LP_ACCOUNT), domains,10);
 
         consumer.methods().initConnection(OM.createObjectNode().put("jwt", jwt)).get();
         String convId = consumer.methods().consumerRequestConversation().get().path("body").path("conversationId").asText();
