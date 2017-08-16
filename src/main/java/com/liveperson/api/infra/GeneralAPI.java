@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import retrofit2.Retrofit.Builder;
 
 public class GeneralAPI {
     public interface CSDS {
@@ -60,20 +61,30 @@ public class GeneralAPI {
             throw new RuntimeException(ex);
         }
     }
-    public  static <T> T apiEndPoint(final String baseUrl, final Class<T> clz,OkHttpClient client) {
-        return new Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(client)
-                .addConverterFactory(JacksonConverterFactory.create())
+
+    public static <T> T apiEndPoint(final String baseUrl, final Class<T> clz, final Builder retrofitBuilder) {
+        return retrofitBuilder
+                .baseUrl(baseUrl)                
                 .build().create(clz);
     }
+        
     public static <T> T apiEndPoint(final String baseUrl, final Class<T> clz) {
-        return apiEndPoint(baseUrl,clz, new OkHttpClient());
-
+        return apiEndPoint(baseUrl,clz, new Retrofit.Builder().addConverterFactory(JacksonConverterFactory.create()));
     }
 
+    ////    
+    @Deprecated
+    public  static <T> T apiEndPoint(final String baseUrl, final Class<T> clz,OkHttpClient client) {
+        return apiEndPoint(baseUrl, clz, new Retrofit.Builder().client(client));
+    }
+
+    ////
     public static <T> T apiEndpoint(final Map<String, String> domains, final Class<T> clz) {
         return apiEndPoint(String.format("https://%s", domains.get(clz.getAnnotation(ServiceName.class).value())), clz);
+    }
+
+    public static <T> T apiEndpoint(final Map<String, String> domains, final Class<T> clz, final Builder retrofitBuilder) {
+        return apiEndPoint(String.format("https://%s", domains.get(clz.getAnnotation(ServiceName.class).value())), clz, retrofitBuilder);
     }
     public static final ObjectMapper OM = new ObjectMapper();
 
