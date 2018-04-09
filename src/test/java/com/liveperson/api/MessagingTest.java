@@ -26,7 +26,6 @@ package com.liveperson.api;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.liveperson.api.infra.GeneralAPI;
 import com.liveperson.api.infra.ws.WebsocketService;
 import org.junit.Before;
