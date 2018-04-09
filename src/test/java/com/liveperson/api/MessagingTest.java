@@ -53,6 +53,7 @@ public class MessagingTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
     public static final String LP_DOMAINS = "https://" + Optional.ofNullable(System.getenv("LP_DOMAINS"))
             .orElse("adminlogin.liveperson.net");
+    public static final String HELLO = "hello";
     Map<String, String> domains;
     String jwt;
 
@@ -81,7 +82,7 @@ public class MessagingTest {
                 .get().path("body").path("conversationId").asText();
 
         consumer.methods().onMessagingEventNotification(x -> {
-            if (x.findPath("message").asText().equals("hello"))
+            if (x.findPath("message").asText().equals(HELLO))
                 msgReceivedLatch.countDown();
         });
 
@@ -96,7 +97,7 @@ public class MessagingTest {
                 "event",of(
                         "type","ContentEvent",
                         "contentType","text/plain",
-                        "message", "hello"
+                        "message", HELLO
                 ))).get();
 
         final boolean msgReceived = msgReceivedLatch.await(3, TimeUnit.SECONDS);
