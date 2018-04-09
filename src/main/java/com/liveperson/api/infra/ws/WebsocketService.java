@@ -168,9 +168,11 @@ public final class WebsocketService<U> {
                             Parameter p = parameters[i];
                             Header header = p.getAnnotation(Header.class);
                             if (header != null) {
-                                headers.add(((ObjectNode) args[i]).put("type", header.value()));
+                                ObjectNode node = args[i] instanceof ObjectNode ? (ObjectNode) args[i] : OM.valueToTree(args[i]);
+                                headers.add((node).put("type", header.value()));
                             } else {
-                                body = Optional.of((JsonNode) args[i]);
+                                JsonNode node = args[i] instanceof JsonNode ? (JsonNode) args[i] : OM.valueToTree(args[i]);
+                                body = Optional.of(node);
                             }
                         }
                         return request(websocketReq.value(), body,

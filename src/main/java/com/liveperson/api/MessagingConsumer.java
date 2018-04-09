@@ -29,6 +29,7 @@ import com.liveperson.api.infra.ws.annotations.WebsocketPath;
 import com.liveperson.api.infra.ws.annotations.WebsocketReq;
 import retrofit2.http.Header;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -45,22 +46,22 @@ public interface MessagingConsumer {
 
     @WebsocketReq("InitConnection")
     CompletableFuture<JsonNode> initConnection(
-            @Header(".ams.headers.ConsumerAuthentication") JsonNode jwtHeader);
+            @Header(".ams.headers.ConsumerAuthentication") Map jwtHeader);
 
     @WebsocketReq("cm.UpdateConversationField")
-    CompletableFuture<JsonNode> updateConversationField(JsonNode body);
+    CompletableFuture<JsonNode> updateConversationField(Map body);
 
     @WebsocketReq("ms.PublishEvent")
-    CompletableFuture<JsonNode> publishEvent(JsonNode body);
+    CompletableFuture<JsonNode> publishEvent(Map body);
 
     @WebsocketReq("ms.SubscribeMessagingEvents")
-    CompletableFuture<JsonNode> subscribeMessagingEvents(JsonNode body);
+    CompletableFuture<JsonNode> subscribeMessagingEvents(Map body);
 
     @WebsocketReq("cqm.SubscribeExConversations")
-    CompletableFuture<JsonNode> subscribeExConversationEvents(JsonNode body);
+    CompletableFuture<JsonNode> subscribeExConversationEvents(Map body);
 
     @WebsocketReq("cqm.UnsubscribeExConversations")
-    CompletableFuture<JsonNode> unsubscribeExConversationEvents(JsonNode body);
+    CompletableFuture<JsonNode> unsubscribeExConversationEvents(Map body);
 
     @WebsocketNotification("ms.MessagingEventNotification")
     Predicate<JsonNode> onMessagingEventNotification(Consumer<JsonNode> cb);

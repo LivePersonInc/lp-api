@@ -28,8 +28,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.ImmutableMap;
 import com.liveperson.api.infra.GeneralAPI;
 import com.liveperson.api.infra.ws.WebsocketService;
 import org.junit.Before;
@@ -43,7 +41,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.ImmutableMap.of;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.hamcrest.number.OrderingComparison.greaterThan;
 import static org.hamcrest.text.IsEmptyString.isEmptyString;
@@ -72,51 +71,46 @@ public class MessagingTest {
 
     @Test
     public void testUMS() throws Exception {
-        CountDownLatch msgRecievedLatch = new CountDownLatch(1);
+        CountDownLatch msgReceivedLatch = new CountDownLatch(1);
         WebsocketService<MessagingConsumer> consumer = WebsocketService.create(MessagingConsumer.class,
                 of("protocol", "wss", "account", LP_ACCOUNT), domains,10);
 
-        consumer.methods().initConnection(OM.createObjectNode().put("jwt", jwt)).get();
+        consumer.methods().initConnection(of("jwt", jwt)).get();
+
         String convId = consumer.methods().consumerRequestConversation()
                 .get().path("body").path("conversationId").asText();
 
         consumer.methods().onMessagingEventNotification(x -> {
             if (x.findPath("message").asText().equals("hello"))
-                msgRecievedLatch.countDown();
+                msgReceivedLatch.countDown();
         });
 
-        consumer.methods().subscribeMessagingEvents(OM.valueToTree(of(
+        consumer.methods().subscribeMessagingEvents(of(
                 "fromSeq",0,
-                "dialogId",convId))).get();
+                "dialogId",convId)).get();
 
         Thread.sleep(100);
-        consumer.methods().publishEvent(OM.valueToTree(of(
+
+        consumer.methods().publishEvent(of(
                 "dialogId",convId,
                 "event",of(
                         "type","ContentEvent",
                         "contentType","text/plain",
                         "message", "hello"
-                )))).get();
+                ))).get();
 
-        final boolean msgRecieved = msgRecievedLatch.await(3, TimeUnit.SECONDS);
-        consumer.methods().updateConversationField(OM.valueToTree(of(
+        final boolean msgReceived = msgReceivedLatch.await(3, TimeUnit.SECONDS);
+
+        JsonNode closeResp = consumer.methods().updateConversationField(of(
                 "conversationId",convId,
                 "conversationField",of(
                         "field","ConversationStateField",
                         "conversationState","CLOSE"
-                ))));
+                ))).get();
 
-        JsonNode closeResp = consumer.methods().updateConversationField(OM.valueToTree(of(
-                "conversationId",convId,
-                "conversationField",of(
-                        "field","ConversationStateField",
-                        "conversationState","CLOSE"
-                )))).get();
+        consumer.getWs().close();
 
         assertThat(closeResp.path("code").asInt(), is(200));
-        consumer.getWs().close();
-        assertTrue(msgRecieved);
+        assertTrue(msgReceived);
     }
-
-    static ObjectMapper OM = new ObjectMapper();
 }
