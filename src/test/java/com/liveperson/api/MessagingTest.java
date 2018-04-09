@@ -27,7 +27,6 @@ package com.liveperson.api;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.liveperson.api.infra.GeneralAPI;
 import com.liveperson.api.infra.ws.WebsocketService;
 import org.junit.Before;
@@ -38,9 +37,9 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.ImmutableMap.of;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
@@ -100,7 +99,7 @@ public class MessagingTest {
                         "message", HELLO
                 ))).get();
 
-        final boolean msgReceived = msgReceivedLatch.await(3, TimeUnit.SECONDS);
+        final boolean msgReceived = msgReceivedLatch.await(3, SECONDS);
 
         JsonNode closeResp = consumer.methods().updateConversationField(of(
                 "conversationId",convId,
