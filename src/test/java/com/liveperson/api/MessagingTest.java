@@ -29,6 +29,7 @@ import ch.qos.logback.classic.Logger;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableMap;
 import com.liveperson.api.infra.GeneralAPI;
 import com.liveperson.api.infra.ws.WebsocketService;
 import org.junit.Before;
@@ -59,66 +60,63 @@ public class MessagingTest {
     @Before
     public void before() throws IOException {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
-//        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
+
         domains = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
         assertThat(domains.keySet(), hasSize(greaterThan(0)));
-        final JsonNode body = GeneralAPI.apiEndpoint(domains, Idp.class)
-                .signup(LP_ACCOUNT)
-                .execute().body();
-        assertThat(body, is(not(nullValue())));
-        jwt = body.path("jwt").asText();
+
+        Idp idp = GeneralAPI.apiEndpoint(domains, Idp.class);
+        jwt = idp.signup(LP_ACCOUNT)
+                .execute().body().path("jwt").asText();
         assertThat(jwt, not(isEmptyString()));
     }
 
     @Test
     public void testUMS() throws Exception {
-        CountDownLatch cdl = new CountDownLatch(1);
+        CountDownLatch msgRecievedLatch = new CountDownLatch(1);
         WebsocketService<MessagingConsumer> consumer = WebsocketService.create(MessagingConsumer.class,
                 of("protocol", "wss", "account", LP_ACCOUNT), domains,10);
 
         consumer.methods().initConnection(OM.createObjectNode().put("jwt", jwt)).get();
-        String convId = consumer.methods().consumerRequestConversation().get().path("body").path("conversationId").asText();
+        String convId = consumer.methods().consumerRequestConversation()
+                .get().path("body").path("conversationId").asText();
 
         consumer.methods().onMessagingEventNotification(x -> {
             if (x.findPath("message").asText().equals("hello"))
-                cdl.countDown();
+                msgRecievedLatch.countDown();
         });
 
-        consumer.methods().subscribeMessagingEvents(subscribeMessagingEventsBody(convId)).get();
+        consumer.methods().subscribeMessagingEvents(OM.valueToTree(of(
+                "fromSeq",0,
+                "dialogId",convId))).get();
+
         Thread.sleep(100);
-        consumer.methods().publishEvent(publishTextBody(convId, "hello"));
-        final boolean await = cdl.await(3, TimeUnit.SECONDS);
-        JsonNode closeResp = consumer.methods().updateConversationField(closeConvBody(convId)).get();
+        consumer.methods().publishEvent(OM.valueToTree(of(
+                "dialogId",convId,
+                "event",of(
+                        "type","ContentEvent",
+                        "contentType","text/plain",
+                        "message", "hello"
+                )))).get();
+
+        final boolean msgRecieved = msgRecievedLatch.await(3, TimeUnit.SECONDS);
+        consumer.methods().updateConversationField(OM.valueToTree(of(
+                "conversationId",convId,
+                "conversationField",of(
+                        "field","ConversationStateField",
+                        "conversationState","CLOSE"
+                ))));
+
+        JsonNode closeResp = consumer.methods().updateConversationField(OM.valueToTree(of(
+                "conversationId",convId,
+                "conversationField",of(
+                        "field","ConversationStateField",
+                        "conversationState","CLOSE"
+                )))).get();
+
         assertThat(closeResp.path("code").asInt(), is(200));
         consumer.getWs().close();
-        assertTrue(await);
+        assertTrue(msgRecieved);
     }
 
-    public static ObjectNode closeConvBody(String convId) {
-        final ObjectNode body = OM.createObjectNode();
-        body.put("conversationId", convId)
-                .putObject("conversationField")
-                .put("field", "ConversationStateField")
-                .put("conversationState", "CLOSE");
-        return body;
-    }
-
-    public static ObjectNode publishTextBody(String convId, String text) {
-        final ObjectNode body = OM.createObjectNode();
-        body.put("dialogId", convId)
-                .putObject("event")
-                .put("type", "ContentEvent")
-                .put("contentType", "text/plain")
-                .put("message", text);
-        return body;
-    }
-
-    public static ObjectNode subscribeMessagingEventsBody(String dialogId) {
-        final ObjectNode subscribeMessagingEvents = OM.createObjectNode();
-        subscribeMessagingEvents
-                .put("fromSeq", 0)
-                .put("dialogId", dialogId);
-        return subscribeMessagingEvents;
-    }
     static ObjectMapper OM = new ObjectMapper();
 }
