@@ -86,8 +86,8 @@ public class MessagingTest {
         });
 
         consumer.methods().subscribeMessagingEvents(of(
-                "fromSeq",0,
-                "dialogId",convId)).get();
+                "dialogId",convId,
+                "fromSeq",0)).get();
 
         Thread.sleep(100);
 
