@@ -101,16 +101,16 @@ public class MessagingTest {
 
         final boolean msgReceived = msgReceivedLatch.await(3, SECONDS);
 
-        JsonNode closeResp = consumer.methods().updateConversationField(of(
-                "conversationId",convId,
-                "conversationField",of(
-                        "field","ConversationStateField",
-                        "conversationState","CLOSE"
-                ))).get();
+        int closeRespCode = consumer.methods().updateConversationField(of(
+                "conversationId", convId,
+                "conversationField", of(
+                        "field", "ConversationStateField",
+                        "conversationState", "CLOSE"
+                ))).get().path("code").asInt();
 
         consumer.getWs().close();
 
-        assertThat(closeResp.path("code").asInt(), is(200));
+        assertThat(closeRespCode, is(200));
         assertTrue(msgReceived);
     }
 }
