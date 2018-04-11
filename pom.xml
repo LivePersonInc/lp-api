@@ -12,7 +12,7 @@
     <artifactId>lp-api</artifactId>
     <version>0.4.3-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <inceptionYear>2017</inceptionYear>
+    <inceptionYear>2018</inceptionYear>
     <name>Liveperson API</name>
     <description>Consume liveperson apis easily from java</description>
     <url>https://github.com/LivePersonInc/lp-api</url>

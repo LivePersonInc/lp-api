@@ -1,6 +1,6 @@
 /**
  * The MIT License
- * Copyright (c) 2017 LivePerson, Inc.
+ * Copyright (c) 2018 LivePerson, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package com.liveperson.api.infra.ws;
 
 import java.util.Map;
