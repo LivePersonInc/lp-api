@@ -26,31 +26,31 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.liveperson.api.infra.MessageTransformerAnnotation;
 import com.liveperson.api.infra.ServiceName;
 import com.liveperson.api.infra.ws.annotations.WebsocketNotification;
 import com.liveperson.api.infra.ws.annotations.WebsocketPath;
 import com.liveperson.api.infra.ws.annotations.WebsocketReq;
+import com.liveperson.api.infra.ws.annotations.WebsocketSingleNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import retrofit2.http.Header;
 
 import javax.websocket.*;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.Proxy;
+import java.lang.reflect.*;
 import java.net.URI;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static com.liveperson.api.infra.ws.TimeoutScheduler.withIn;
 import static com.liveperson.utils.GeneralUtils.*;
+import static java.util.Arrays.asList;
 
 public final class WebsocketService<U> {
     private final Logger LOG = LoggerFactory.getLogger(WebsocketService.class);
@@ -62,12 +62,13 @@ public final class WebsocketService<U> {
      * @param methodsClz
      * @param params
      * @param timeout
+     * @param transformer
      * @return
      */
-    public static <U> WebsocketService<U> create(Class<U> methodsClz, Map<String, String> params, int timeout) {
+    public static <U> WebsocketService<U> create(Class<U> methodsClz, Map<String, String> params, int timeout, MessageTransformer transformer) {
         WebsocketPath websocketPath = methodsClz.getAnnotation(WebsocketPath.class);
         if (websocketPath != null)
-            return WebsocketService.create(methodsClz, replaceParams(websocketPath.value(), params), timeout);
+            return WebsocketService.create(methodsClz, replaceParams(websocketPath.value(), params), timeout, transformer);
         throw new RuntimeException("Missing annotations on class " + methodsClz.getName());
     }
 
@@ -82,30 +83,43 @@ public final class WebsocketService<U> {
      * @param timeout
      * @return
      */
-    public static <U> WebsocketService<U> create(Class<U> methodsClz, Map<String, String> params, Map<String, String> domains, int timeout) {
+    public static <U> WebsocketService<U> create(Class<U> methodsClz, Map<String, String> params, Map<String, String> domains, int timeout) throws IllegalAccessException, InstantiationException, NoSuchMethodException, InvocationTargetException {
+        MessageTransformerAnnotation messageTransformeAnnotation = methodsClz.getAnnotation(MessageTransformerAnnotation.class);
+        MessageTransformer messageTransformer = messageTransformeAnnotation!=null?
+                messageTransformeAnnotation.value().getDeclaredConstructor(Map.class).newInstance(params):
+                DO_NOTHING;
+        return create(methodsClz, params, domains, timeout, messageTransformer);
+    }
+
+    public static <U> WebsocketService<U> create(Class<U> methodsClz, Map<String, String> params, Map<String, String> domains, int timeout,  MessageTransformer transformer) {
         ServiceName serviceName = methodsClz.getAnnotation(ServiceName.class);
         if (serviceName != null) {
             HashMap<String, String> paramsWithDomain = new HashMap<>(params.size() + 1);
             paramsWithDomain.putAll(params);
             paramsWithDomain.put("domain", domains.get(serviceName.value()));
-            return WebsocketService.create(methodsClz, paramsWithDomain, timeout);
+            return WebsocketService.create(methodsClz, paramsWithDomain, timeout, transformer);
         }
         throw new RuntimeException("Missing annotations on class " + methodsClz.getName());
     }
 
-    public static <U> WebsocketService<U> create(Class<U> methodsClz, final String uri, int timeout) {
+    public static <U> WebsocketService<U> create(Class<U> methodsClz, final String uri, int timeout, MessageTransformer transformer) {
         HandlerManagerImpl<JsonNode> fm = new HandlerManagerImpl<>();
         return supplyRethrow(()
-                -> new WebsocketService(WEB_SOCKET_CONTAINER.connectToServer(new MyIntEP(fm.filter()), null, URI.create(uri)), fm, methodsClz, timeout));
+                -> new WebsocketService(WEB_SOCKET_CONTAINER.connectToServer(new MyIntEP(fm.filter(), transformer::incoming), null, URI.create(uri)), fm, methodsClz, timeout, transformer));
     }
 
     private final U methods;
     private final String name;
 
     public void send(JsonNode msg) {
-        LOG.debug("{}-{}:SEND: {}", name, getWs().getId(), msg);
-        runRethrow(()
-                -> ws.getAsyncRemote().sendText(OM.writeValueAsString(msg)));
+        List<JsonNode> trasformedMsg = transformer.outgoing((ObjectNode) msg);
+        LOG.debug("{}-{}:SEND: {}", name, getWs().getId(), trasformedMsg);
+        trasformedMsg.stream().forEach(rethrow(m->{
+            ws.getAsyncRemote().sendText(OM.writeValueAsString(m));
+        }));
+
+//        runRethrow(()
+//                -> ws.getAsyncRemote().sendText(OM.writeValueAsString(trasformedMsg)));
     }
 
     public Predicate<JsonNode> on(Predicate<JsonNode> matcher, Consumer<JsonNode> consumer) {
@@ -133,6 +147,31 @@ public final class WebsocketService<U> {
         });
         return cf;
     }
+
+    public ListenerBuilder listenerBuilder() {
+        return new ListenerBuilder(this);
+    }
+
+    public static class ListenerBuilder {
+        final WebsocketService service;
+        Predicate<JsonNode> matcher = p->true;
+
+        ListenerBuilder(WebsocketService service) {
+            this.service = service;
+        }
+
+        public ListenerBuilder where(Predicate<JsonNode> p) {
+            matcher = matcher.and(p);
+            return this;
+        }
+
+        public CompletableFuture<JsonNode> listen() {
+            return service.waitForMsg(matcher, TimeoutScheduler.withIn(Duration.ofSeconds(service.timeout)));
+        }
+
+    }
+
+
 
     public CompletableFuture<JsonNode> request(ObjectNode reqMsg) {
         return request(reqMsg, withIn(Duration.ofSeconds(timeout)));
@@ -188,6 +227,10 @@ public final class WebsocketService<U> {
                             cb.accept(m);
                         });
                     }
+                    WebsocketSingleNotification websocketSingleNotif = method.getAnnotation(WebsocketSingleNotification.class);
+                    if (websocketSingleNotif != null) {
+                        return listenerBuilder().where(m -> m.path("type").asText().equals(websocketSingleNotif.value()));
+                    }
                     throw new RuntimeException("Method is not annotated with " + WebsocketReq.class.getName());
                 });
     }
@@ -197,8 +240,14 @@ public final class WebsocketService<U> {
     private static class MyIntEP extends Endpoint implements MessageHandler.Whole<String> {
         private final Logger LOG = LoggerFactory.getLogger(MyIntEP.class);
         protected final Predicate<JsonNode> handlers;
+        private final Function<ObjectNode,List<JsonNode>> transformer;
         private Session currentSession;
         public MyIntEP(Predicate<JsonNode> filter) {
+            this(filter, f->asList(f));
+        }
+
+        public MyIntEP(Predicate<JsonNode> filter, Function<ObjectNode,List<JsonNode>> transformer) {
+            this.transformer = transformer;
             this.handlers = filter;
         }
 
@@ -211,7 +260,12 @@ public final class WebsocketService<U> {
         @Override
         public void onMessage(String t) {
             LOG.debug("OnMessage {} {}",t,currentSession.getRequestURI(),currentSession.getUserProperties());
-            Optional.of(t).map(rethrowF(OM::readTree)).filter(handlers);
+            Stream.of(t)
+                    .map(rethrowF(OM::readTree))
+                    .map(j->(ObjectNode)j)
+                    .map(transformer)
+                    .flatMap(Collection::stream)
+                    .forEach(handlers::test);
         }
 
         @Override
@@ -230,12 +284,14 @@ public final class WebsocketService<U> {
         }
     }
 
-    public WebsocketService(Session ws, HandlerManager<JsonNode> fm, Class<U> clz, int timeout) {
+    public WebsocketService(Session ws, HandlerManager<JsonNode> fm, Class<U> clz, int timeout, MessageTransformer transformer) {
+        ws.setMaxTextMessageBufferSize(Integer.MAX_VALUE);
         this.ws = ws;
         this.fm = fm;
         this.timeout = timeout;
         this.methods = caller(clz);
         this.name = clz.getSimpleName();
+        this.transformer = transformer;
     }
 
     public Session getWs() {
@@ -252,6 +308,8 @@ public final class WebsocketService<U> {
     protected final Session ws;
     protected final HandlerManager<JsonNode> fm;
     private final int timeout;
+    private final MessageTransformer transformer;
+
 
     private static String replaceParams(String template, Map<String, String> params) {
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -259,4 +317,17 @@ public final class WebsocketService<U> {
         }
         return template;
     }
+
+    public static final MessageTransformer DO_NOTHING = new MessageTransformer() {
+        @Override
+        public List<JsonNode> outgoing(ObjectNode msg) {
+            return asList(msg);
+        }
+
+        @Override
+        public List<JsonNode> incoming(ObjectNode msg) {
+            return asList(msg);
+        }
+    };
+
 }

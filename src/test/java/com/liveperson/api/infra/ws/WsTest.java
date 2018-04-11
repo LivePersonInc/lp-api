@@ -65,7 +65,7 @@ public class WsTest {
     @Test
     public void testFastRequests() throws Exception {
         WebsocketService<TestMethods> connection = WebsocketService.create(TestMethods.class,
-                of("domain", "localhost:48080"),10);
+                of("domain", "localhost:48080"),10, WebsocketService.DO_NOTHING);
 
         Phaser phaser = new Phaser(1); //register also the managing thread.
         RateLimiter rl = RateLimiter.create(100);
@@ -104,7 +104,7 @@ public class WsTest {
             rlConnect.acquire();
             es.execute(() -> {
                 q.add(WebsocketService.create(TestMethods.class,
-                        of("domain", "localhost:48080"),10));
+                        of("domain", "localhost:48080"),10, WebsocketService.DO_NOTHING));
             });
         }
 

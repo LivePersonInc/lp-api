@@ -23,13 +23,14 @@
 package com.liveperson.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.liveperson.api.AgentMessageTransformer;
+import com.liveperson.api.infra.MessageTransformerAnnotation;
 import com.liveperson.api.infra.ServiceName;
 import com.liveperson.api.infra.ws.WebsocketService;
 import com.liveperson.api.infra.ws.annotations.WebsocketNotification;
 import com.liveperson.api.infra.ws.annotations.WebsocketPath;
 import com.liveperson.api.infra.ws.annotations.WebsocketReq;
 import com.liveperson.api.infra.ws.annotations.WebsocketSingleNotification;
-import retrofit2.http.Header;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -37,40 +38,26 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 @ServiceName("asyncMessagingEnt")
-@WebsocketPath("{protocol}://{domain}/ws_api/account/{account}/messaging/consumer?v=3")
-public interface MessagingConsumer {
+@MessageTransformerAnnotation(AgentMessageTransformer.class)
+@WebsocketPath("{protocol}://{domain}/ws_api/account/{account}/messaging/brand/{bearer}?v=2")
+public interface MessagingAgent {
+    @WebsocketReq("routing.SubscribeRoutingTasks")
+    CompletableFuture<JsonNode> subscribeRoutingTasks();
+    @WebsocketReq("routing.SetAgentState")
+    CompletableFuture<JsonNode> setAgentState(Map body);
 
-    @WebsocketReq("GetClock")
-    CompletableFuture<JsonNode> getClock();
-
-    @WebsocketReq("cm.ConsumerRequestConversation")
-    CompletableFuture<JsonNode> consumerRequestConversation();
-
-    @WebsocketReq("InitConnection")
-    CompletableFuture<JsonNode> initConnection(
-            @Header(".ams.headers.ConsumerAuthentication") Map jwtHeader);
-
-    @WebsocketReq("cm.UpdateConversationField")
-    CompletableFuture<JsonNode> updateConversationField(Map body);
-
-    @WebsocketReq("ms.PublishEvent")
-    CompletableFuture<JsonNode> publishEvent(Map body);
-
-    @WebsocketReq("ms.SubscribeMessagingEvents")
-    CompletableFuture<JsonNode> subscribeMessagingEvents(Map body);
+    @WebsocketReq("routing.UpdateRingState")
+    CompletableFuture<JsonNode> updateRingState(Map body);
 
     @WebsocketReq("cqm.SubscribeExConversations")
-    CompletableFuture<JsonNode> subscribeExConversationEvents(Map body);
+    CompletableFuture<JsonNode> subscribeExConversations(Map body);
 
-    @WebsocketReq("cqm.UnsubscribeExConversations")
-    CompletableFuture<JsonNode> unsubscribeExConversationEvents(Map body);
-
-    @WebsocketNotification("ms.MessagingEventNotification")
-    Predicate<JsonNode> onMessagingEventNotification(Consumer<JsonNode> cb);
+    @WebsocketSingleNotification("cqm.ExConversationChangeNotification")
+    WebsocketService.ListenerBuilder onNextExConversationChangeNotification();
 
     @WebsocketSingleNotification("ms.MessagingEventNotification")
     WebsocketService.ListenerBuilder onNextMessagingEventNotification();
 
-    @WebsocketNotification("cqm.ExConversationChangeNotification")
-    Predicate<JsonNode> onExConversationChangeNotification(Consumer<JsonNode> cb);
+    @WebsocketNotification("routing.RoutingTaskNotification")
+    Predicate<JsonNode> onRoutingTaskNotification(Consumer<JsonNode> cb);
 }

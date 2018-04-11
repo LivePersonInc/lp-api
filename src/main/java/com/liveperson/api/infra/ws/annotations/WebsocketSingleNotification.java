@@ -20,28 +20,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.liveperson.api;
+package com.liveperson.api.infra.ws.annotations;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.liveperson.api.infra.ServiceName;
-import retrofit2.Call;
-import retrofit2.http.Body;
-import retrofit2.http.Headers;
-import retrofit2.http.POST;
-import retrofit2.http.Path;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.util.Map;
-
-@ServiceName("agentVep")
-public interface AgentVep {
-
-    /**
-     *
-     * @param account
-     * @param body { "username" : "", "password" : "" }
-     * @return { "bearer": "" }
-     */
-    @Headers("Cache-Control: no-cache")
-    @POST("api/account/{account}/login?v=1.3")
-    Call<JsonNode> login(@Path("account") String account, @Body Map body);
+@Retention(value = RetentionPolicy.RUNTIME)
+@Target(value = ElementType.METHOD) //can use in method only.
+public @interface WebsocketSingleNotification {
+    public String value();
+    
 }

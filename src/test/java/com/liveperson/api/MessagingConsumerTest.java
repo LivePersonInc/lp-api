@@ -26,19 +26,23 @@ package com.liveperson.api;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.liveperson.api.infra.GeneralAPI;
+import com.liveperson.api.infra.ws.TimeoutScheduler;
 import com.liveperson.api.infra.ws.WebsocketService;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableMap.of;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
@@ -47,7 +51,7 @@ import static org.hamcrest.text.IsEmptyString.isEmptyString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class MessagingTest {
+public class MessagingConsumerTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
     public static final String LP_DOMAINS = "https://" + Optional.ofNullable(System.getenv("LP_DOMAINS"))
             .orElse("adminlogin.liveperson.net");
@@ -70,7 +74,6 @@ public class MessagingTest {
 
     @Test
     public void testUMS() throws Exception {
-        CountDownLatch msgReceivedLatch = new CountDownLatch(1);
         WebsocketService<MessagingConsumer> consumer = WebsocketService.create(MessagingConsumer.class,
                 of("protocol", "wss", "account", LP_ACCOUNT), domains,10);
 
@@ -79,16 +82,11 @@ public class MessagingTest {
         String convId = consumer.methods().consumerRequestConversation()
                 .get().path("body").path("conversationId").asText();
 
-        consumer.methods().onMessagingEventNotification(x -> {
-            if (x.findPath("message").asText().equals(HELLO))
-                msgReceivedLatch.countDown();
-        });
-
         consumer.methods().subscribeMessagingEvents(of(
                 "dialogId",convId,
                 "fromSeq",0)).get();
 
-        Thread.sleep(100);
+        Thread.sleep(1000);
 
         consumer.methods().publishEvent(of(
                 "dialogId",convId,
@@ -96,9 +94,10 @@ public class MessagingTest {
                         "type","ContentEvent",
                         "contentType","text/plain",
                         "message", HELLO
-                ))).get();
+                )));
 
-        final boolean msgReceived = msgReceivedLatch.await(3, SECONDS);
+        consumer.methods().onNextMessagingEventNotification()
+                .where(m -> m.findPath("message").asText().equals(HELLO)).listen().get();
 
         int closeRespCode = consumer.methods().updateConversationField(of(
                 "conversationId", convId,
@@ -110,6 +109,5 @@ public class MessagingTest {
         consumer.getWs().close();
 
         assertThat(closeRespCode, is(200));
-        assertTrue(msgReceived);
     }
 }

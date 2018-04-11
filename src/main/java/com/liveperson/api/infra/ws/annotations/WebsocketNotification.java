@@ -31,5 +31,4 @@ import java.lang.annotation.Target;
 @Target(value = ElementType.METHOD) //can use in method only.
 public @interface WebsocketNotification {
     public String value();
-    
 }
