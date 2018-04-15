@@ -52,6 +52,12 @@ public interface MessagingAgent {
     @WebsocketReq("cqm.SubscribeExConversations")
     CompletableFuture<JsonNode> subscribeExConversations(Map body);
 
+    @WebsocketReq("cm.UpdateConversationField")
+    CompletableFuture<JsonNode> updateConversationField(Map body);
+
+    @WebsocketReq("ms.PublishEvent")
+    CompletableFuture<JsonNode> publishEvent(Map body);
+
     @WebsocketSingleNotification("cqm.ExConversationChangeNotification")
     WebsocketService.ListenerBuilder onNextExConversationChangeNotification();
 

@@ -53,6 +53,7 @@ public class MessagingAgentTest {
             .orElse("adminlogin.liveperson.net");
     public static final Map<String, String> DOMAINS = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
     public static final String HELLO = "HELLO";
+    public static final String AGENT_HELLO = "GOODBYE";
     private static String consumerJwt;
     private static String agentOldId;
     private static String agentBearer;
@@ -61,7 +62,7 @@ public class MessagingAgentTest {
     @BeforeClass
     public static void before() throws IOException {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
-//        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
+        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
 
         Idp idp = GeneralAPI.apiEndpoint(DOMAINS, Idp.class);
         consumerJwt = idp.signup(LP_ACCOUNT)
@@ -126,12 +127,53 @@ public class MessagingAgentTest {
         agent.methods().onNextMessagingEventNotification()
                 .where(msg->msg.findPath("message").asText().equals(HELLO)).listen().get();
 
-        consumer.methods().updateConversationField(of(
+        // agent send message
+        agent.methods().publishEvent(of(
+                "dialogId",convId,
+                "event",of(
+                        "type","ContentEvent",
+                        "contentType","text/plain",
+                        "message", AGENT_HELLO
+                )));
+
+        // consumer subscribe and verify agent message
+        consumer.methods().subscribeMessagingEvents(of(
+                "dialogId",convId,
+                "fromSeq",0));
+
+        consumer.methods().onNextMessagingEventNotification()
+                .where(m -> m.findPath("message").asText().equals(AGENT_HELLO)).listen().get();
+
+        // agent set TTR
+        agent.methods().updateConversationField(of(
+                "conversationId", convId,
+                "conversationField", of(
+                        "field", "TTRField",
+                        "ttrType", "CUSTOM",
+                        "value", 1800
+                ))).get();
+
+        // consumer validate ttr change
+
+        // agent close conversation
+        agent.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "ConversationStateField",
                         "conversationState", "CLOSE"
                 ))).get();
+
+        // consumer update csat survey
+        consumer.methods().updateConversationField(of(
+                "conversationId", convId,
+                "conversationField", of(
+                        "field", "CSATRate",
+                        "csatRate", 5,
+                        "csatResolutionConfirmation",true,
+                        "status","FILLED"
+                ))).get();
+
+        // agent workspace validate csat 
 
         consumer.getWs().close();
         agent.getWs().close();
