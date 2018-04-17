@@ -52,6 +52,12 @@ public class AgentMessageTransformer implements MessageTransformer {
     public List<JsonNode> outgoing(ObjectNode msg) {
         ObjectNode clone = msg.deepCopy();
         switch (clone.path("type").asText()) {
+            case "ms.PublishEvent":
+                clone.put("type", ".ams.ms.PublishEvent");
+                break;
+            case "cm.UpdateConversationField":
+                clone.put("type", ".ams.cm.UpdateConversationField");
+                break;
             case "routing.SetAgentState":
                 clone.put("type", ".ams.routing.SetAgentState")
                         .with("body")
@@ -85,6 +91,12 @@ public class AgentMessageTransformer implements MessageTransformer {
     public List<JsonNode> incoming(ObjectNode msg) {
         ObjectNode clone = msg.deepCopy();
         switch (clone.path("type").asText()) {
+            case "ams.ms.PublishEvent":
+                clone.put("type", "ms.PublishEvent");
+                break;
+            case "ams.cm.UpdateConversationField":
+                clone.put("type", "ms.UpdateConversationField");
+                break;
             case ".ams.ms.OnlineEventDistribution":
                 clone.remove("body");
                 ObjectNode newChange = ((ObjectNode) msg.path("body").deepCopy())

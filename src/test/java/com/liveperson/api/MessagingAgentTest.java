@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import static com.google.common.collect.ImmutableMap.of;
@@ -53,6 +54,7 @@ public class MessagingAgentTest {
             .orElse("adminlogin.liveperson.net");
     public static final Map<String, String> DOMAINS = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
     public static final String HELLO = "HELLO";
+    public static final String AGENT_HELLO = "GOODBYE";
     private static String consumerJwt;
     private static String agentOldId;
     private static String agentBearer;
@@ -61,7 +63,7 @@ public class MessagingAgentTest {
     @BeforeClass
     public static void before() throws IOException {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
-//        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
+        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
 
         Idp idp = GeneralAPI.apiEndpoint(DOMAINS, Idp.class);
         consumerJwt = idp.signup(LP_ACCOUNT)
@@ -115,6 +117,8 @@ public class MessagingAgentTest {
                 .where(msg->msg.findPath("convId").asText().equals(convId))
                 .listen().get();
 
+
+        // consumer send message
         consumer.methods().publishEvent(of(
                 "dialogId",convId,
                 "event",of(
@@ -123,16 +127,88 @@ public class MessagingAgentTest {
                         "message", HELLO
                 )));
 
+        // agent verify message
         agent.methods().onNextMessagingEventNotification()
                 .where(msg->msg.findPath("message").asText().equals(HELLO)).listen().get();
 
-        consumer.methods().updateConversationField(of(
+        // agent send message
+       agent.methods().publishEvent(of(
+                "dialogId",convId,
+                "event",of(
+                        "type","ContentEvent",
+                        "contentType","text/plain",
+                        "message", AGENT_HELLO
+                )));
+
+        // consumer subscribe and verify agent message
+        consumer.methods().subscribeMessagingEvents(of(
+                "dialogId",convId,
+                "fromSeq",0));
+
+        consumer.methods().onNextMessagingEventNotification()
+                .where(m -> m.findPath("message").asText().equals(AGENT_HELLO)).listen().get();
+
+        // consumer subscribe to conversation metadata changes
+        consumer.methods().subscribeExConversationEvents(of(
+                "minLastUpdatedTime",0,
+                "convState",asList("OPEN","CLOSE")
+        ));
+
+        // consumer add notification listener
+        CompletableFuture<JsonNode> notification = consumer.methods().onNextExConversationChangeNotification().listen();
+
+        // agent set TTR
+        Assert.assertTrue("POST: update TTR failed", agent.methods().updateConversationField(of(
+                "conversationId", convId,
+                "conversationField", of(
+                        "field", "TTRField",
+                        "ttrType", "CUSTOM",
+                        "value", 1800
+                ))).get().path("code").asText().equals("200"));
+
+        // ttr conversation metadata validation
+        JsonNode notificationResp = notification.get();
+
+        Assert.assertTrue(notificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("ttr").get("value").asText().equals(String.valueOf(1800)));
+
+        Assert.assertTrue(notificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("ttr").get("ttrType").asText().equals("CUSTOM"));
+
+
+        // agent close conversation
+        Assert.assertTrue("POST: agent close conversation",agent.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "ConversationStateField",
                         "conversationState", "CLOSE"
-                ))).get();
+                ))).get().path("code").asText().equals("200"));
 
+
+        // consumer update csat survey
+        Assert.assertTrue("POST: consumer update csat failed", consumer.methods().updateConversationField(of(
+                "conversationId", convId,
+                "conversationField", of(
+                        "field", "CSATRate",
+                        "csatRate", 5,
+                        "csatResolutionConfirmation",true,
+                        "status","FILLED"
+                ))).get().path("code").asText().equals("200"));
+
+
+        /*// agent verify consumer csat rate
+        JsonNode agentNotificationResp = agent.methods().onNextExConversationChangeNotification().listen().get();
+
+        Assert.assertTrue(agentNotificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("csat").get("csatRate").asText().equals(String.valueOf(5)));
+
+        Assert.assertTrue(agentNotificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("csat").get("status").asText().equals("FILLED"));
+*/
         consumer.getWs().close();
         agent.getWs().close();
     }
