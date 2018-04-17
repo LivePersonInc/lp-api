@@ -32,10 +32,12 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
+import sun.jvm.hotspot.runtime.Thread;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import static com.google.common.collect.ImmutableMap.of;
@@ -116,6 +118,8 @@ public class MessagingAgentTest {
                 .where(msg->msg.findPath("convId").asText().equals(convId))
                 .listen().get();
 
+
+        // consumer send message
         consumer.methods().publishEvent(of(
                 "dialogId",convId,
                 "event",of(
@@ -124,11 +128,12 @@ public class MessagingAgentTest {
                         "message", HELLO
                 )));
 
+        // agent verify message
         agent.methods().onNextMessagingEventNotification()
                 .where(msg->msg.findPath("message").asText().equals(HELLO)).listen().get();
 
         // agent send message
-        agent.methods().publishEvent(of(
+       agent.methods().publishEvent(of(
                 "dialogId",convId,
                 "event",of(
                         "type","ContentEvent",
@@ -144,36 +149,55 @@ public class MessagingAgentTest {
         consumer.methods().onNextMessagingEventNotification()
                 .where(m -> m.findPath("message").asText().equals(AGENT_HELLO)).listen().get();
 
+        // consumer subscribe to conversation metadata changes
+        consumer.methods().subscribeExConversationEvents(of(
+                "minLastUpdatedTime",0,
+                "convState",asList("OPEN","CLOSE")
+        ));
+
+        // consumer add notification listener
+        CompletableFuture<JsonNode> notification = consumer.methods().onNextExConversationChangeNotification().listen();
+
         // agent set TTR
-        agent.methods().updateConversationField(of(
+        Assert.assertTrue("POST: update TTR failed", agent.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "TTRField",
                         "ttrType", "CUSTOM",
                         "value", 1800
-                ))).get();
+                ))).get().path("code").asText().equals("200"));
 
-        // consumer validate ttr change
+        // ttr conversation metadata validation
+        JsonNode notificationResp = notification.get();
+
+        Assert.assertTrue(notificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("ttr").get("value").asText().equals(String.valueOf(1800)));
+
+        Assert.assertTrue(notificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("ttr").get("ttrType").asText().equals("CUSTOM"));
+
 
         // agent close conversation
-        agent.methods().updateConversationField(of(
+        Assert.assertTrue("POST: agent close conversation",agent.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "ConversationStateField",
                         "conversationState", "CLOSE"
-                ))).get();
+                ))).get().path("code").asText().equals("200"));
 
         // consumer update csat survey
-        consumer.methods().updateConversationField(of(
+        Assert.assertTrue("POST: consumer update csat failed", consumer.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "CSATRate",
                         "csatRate", 5,
                         "csatResolutionConfirmation",true,
                         "status","FILLED"
-                ))).get();
+                ))).get().path("code").asText().equals("200"));
 
-        // agent workspace validate csat 
+        // agent workspace validate csat ?
 
         consumer.getWs().close();
         agent.getWs().close();

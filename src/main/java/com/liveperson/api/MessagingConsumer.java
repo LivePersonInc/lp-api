@@ -71,6 +71,12 @@ public interface MessagingConsumer {
     @WebsocketSingleNotification("ms.MessagingEventNotification")
     WebsocketService.ListenerBuilder onNextMessagingEventNotification();
 
+    @WebsocketSingleNotification("cqm.ExConversationChangeNotification")
+    WebsocketService.ListenerBuilder onNextExConversationChangeNotification();
+
+    @WebsocketSingleNotification("cqm.SubscribeExConversationsResponse")
+    WebsocketService.ListenerBuilder onNextExConversationResponse();
+
     @WebsocketNotification("cqm.ExConversationChangeNotification")
     Predicate<JsonNode> onExConversationChangeNotification(Consumer<JsonNode> cb);
 }
