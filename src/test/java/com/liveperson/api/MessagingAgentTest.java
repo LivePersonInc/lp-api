@@ -32,7 +32,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
-import sun.jvm.hotspot.runtime.Thread;
 
 import java.io.IOException;
 import java.util.Map;
@@ -187,6 +186,7 @@ public class MessagingAgentTest {
                         "conversationState", "CLOSE"
                 ))).get().path("code").asText().equals("200"));
 
+
         // consumer update csat survey
         Assert.assertTrue("POST: consumer update csat failed", consumer.methods().updateConversationField(of(
                 "conversationId", convId,
@@ -197,8 +197,18 @@ public class MessagingAgentTest {
                         "status","FILLED"
                 ))).get().path("code").asText().equals("200"));
 
-        // agent workspace validate csat ?
 
+        /*// agent verify consumer csat rate
+        JsonNode agentNotificationResp = agent.methods().onNextExConversationChangeNotification().listen().get();
+
+        Assert.assertTrue(agentNotificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("csat").get("csatRate").asText().equals(String.valueOf(5)));
+
+        Assert.assertTrue(agentNotificationResp.path("body").path("changes").get(0).
+                path("result").path("conversationDetails").
+                path("csat").get("status").asText().equals("FILLED"));
+*/
         consumer.getWs().close();
         agent.getWs().close();
     }
