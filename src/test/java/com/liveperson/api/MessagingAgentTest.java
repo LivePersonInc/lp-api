@@ -42,10 +42,10 @@ import java.util.function.Consumer;
 import static com.google.common.collect.ImmutableMap.of;
 import static com.liveperson.api.AgentMessageTransformer.*;
 import static java.util.Arrays.asList;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.text.IsEmptyString.isEmptyString;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 public class MessagingAgentTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
@@ -168,16 +168,12 @@ public class MessagingAgentTest {
                 ))).get();
 
         // ttr conversation metadata validation
-        JsonNode notificationResp = notification.get();
+        JsonNode ttrNotification = notification.get()
+                .path("body").path("changes").get(0)
+                .path("result").path("conversationDetails").path("ttr");
 
-        assertTrue(notificationResp.path("body").path("changes").get(0).
-                path("result").path("conversationDetails").
-                path("ttr").get("value").asInt() == 1800);
-
-        assertTrue(notificationResp.path("body").path("changes").get(0).
-                path("result").path("conversationDetails").
-                path("ttr").get("ttrType").asText().equals("CUSTOM"));
-
+        assertThat(ttrNotification.path("value").asInt(), equalTo(1800));
+        assertThat(ttrNotification.path("ttrType").asText(), equalTo("CUSTOM"));
 
         // agent close conversation
         agent.methods().updateConversationField(of(
