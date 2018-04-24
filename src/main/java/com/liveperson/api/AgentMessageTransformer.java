@@ -52,6 +52,9 @@ public class AgentMessageTransformer implements MessageTransformer {
     public List<JsonNode> outgoing(ObjectNode msg) {
         ObjectNode clone = msg.deepCopy();
         switch (clone.path("type").asText()) {
+            case "cm.AgentRequestConversation" :
+                clone.put("type", ".ams.cm.AgentRequestConversation");
+                break;
             case "ms.PublishEvent":
                 clone.put("type", ".ams.ms.PublishEvent");
                 break;
@@ -79,6 +82,15 @@ public class AgentMessageTransformer implements MessageTransformer {
                         .filter(id -> id.asText().equals(getParam(AGENT_ID).get()))
                         .map(id -> getParam(AGENT_OLD_ID).get())
                         .forEachOrdered(id->agentOldIds.add(id));
+                break;
+            case "cqm.UnSubscribeExConversations":
+                ArrayNode agent2OldIds = clone.put("type", ".ams.aam.UnSubscribeExConversations")
+                        .with("body")
+                        .withArray("agentIds").removeAll();
+                streamOf(msg.with("body").withArray("agentIds").elements())
+                        .filter(id -> id.asText().equals(getParam(AGENT_ID).get()))
+                        .map(id -> getParam(AGENT_OLD_ID).get())
+                        .forEachOrdered(id->agent2OldIds.add(id));
                 break;
             case "routing.UpdateRingState":
                 clone.put("type", ".ams.routing.UpdateRingState");
@@ -110,6 +122,9 @@ public class AgentMessageTransformer implements MessageTransformer {
                 break;
             case ".ams.routing.RoutingTaskNotification":
                 clone.put("type", "routing.RoutingTaskNotification");
+                break;
+            case ".ams.aam.SubscribeExConversations$Response":
+                clone.put("type", "cqm.SubscribeExConversationsResponse");
                 break;
             case ".ams.aam.ExConversationChangeNotification":
                 clone.put("type", "cqm.ExConversationChangeNotification");

@@ -41,13 +41,21 @@ import java.util.function.Predicate;
 @MessageTransformerAnnotation(AgentMessageTransformer.class)
 @WebsocketPath("{protocol}://{domain}/ws_api/account/{account}/messaging/brand/{bearer}?v=2")
 public interface MessagingAgent {
+
+    @WebsocketReq("cm.AgentRequestConversation")
+    CompletableFuture<JsonNode> agentRequestConversation(Map body);
+
     @WebsocketReq("routing.SubscribeRoutingTasks")
     CompletableFuture<JsonNode> subscribeRoutingTasks();
+
     @WebsocketReq("routing.SetAgentState")
     CompletableFuture<JsonNode> setAgentState(Map body);
 
     @WebsocketReq("routing.UpdateRingState")
     CompletableFuture<JsonNode> updateRingState(Map body);
+
+    @WebsocketReq("cqm.UnsubscribeExConversations")
+    CompletableFuture<JsonNode> unSubscribeExConversations(Map body);
 
     @WebsocketReq("cqm.SubscribeExConversations")
     CompletableFuture<JsonNode> subscribeExConversations(Map body);
@@ -63,6 +71,9 @@ public interface MessagingAgent {
 
     @WebsocketSingleNotification("ms.MessagingEventNotification")
     WebsocketService.ListenerBuilder onNextMessagingEventNotification();
+
+    @WebsocketSingleNotification("cqm.SubscribeExConversationsResponse")
+    WebsocketService.ListenerBuilder onNextExConversationResponse();
 
     @WebsocketNotification("routing.RoutingTaskNotification")
     Predicate<JsonNode> onRoutingTaskNotification(Consumer<JsonNode> cb);
