@@ -42,6 +42,7 @@ import java.util.function.Consumer;
 import static com.google.common.collect.ImmutableMap.of;
 import static com.liveperson.api.AgentMessageTransformer.*;
 import static java.util.Arrays.asList;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.text.IsEmptyString.isEmptyString;
 import static org.junit.Assert.assertThat;
@@ -63,7 +64,7 @@ public class MessagingAgentTest {
     @BeforeClass
     public static void before() throws IOException {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
-        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
+//        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
 
         Idp idp = GeneralAPI.apiEndpoint(DOMAINS, Idp.class);
         consumerJwt = idp.signup(LP_ACCOUNT)
@@ -132,7 +133,7 @@ public class MessagingAgentTest {
                 .where(msg->msg.findPath("message").asText().equals(HELLO)).listen().get();
 
         // agent send message
-       agent.methods().publishEvent(of(
+        agent.methods().publishEvent(of(
                 "dialogId",convId,
                 "event",of(
                         "type","ContentEvent",
@@ -158,37 +159,33 @@ public class MessagingAgentTest {
         CompletableFuture<JsonNode> notification = consumer.methods().onNextExConversationChangeNotification().listen();
 
         // agent set TTR
-        Assert.assertTrue("POST: update TTR failed", agent.methods().updateConversationField(of(
+        agent.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "TTRField",
                         "ttrType", "CUSTOM",
                         "value", 1800
-                ))).get().path("code").asText().equals("200"));
+                ))).get();
 
         // ttr conversation metadata validation
-        JsonNode notificationResp = notification.get();
+        JsonNode ttrNotification = notification.get()
+                .path("body").path("changes").get(0)
+                .path("result").path("conversationDetails").path("ttr");
 
-        Assert.assertTrue(notificationResp.path("body").path("changes").get(0).
-                path("result").path("conversationDetails").
-                path("ttr").get("value").asText().equals(String.valueOf(1800)));
-
-        Assert.assertTrue(notificationResp.path("body").path("changes").get(0).
-                path("result").path("conversationDetails").
-                path("ttr").get("ttrType").asText().equals("CUSTOM"));
-
+        assertThat(ttrNotification.path("value").asInt(), equalTo(1800));
+        assertThat(ttrNotification.path("ttrType").asText(), equalTo("CUSTOM"));
 
         // agent close conversation
-        Assert.assertTrue("POST: agent close conversation",agent.methods().updateConversationField(of(
+        agent.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "ConversationStateField",
                         "conversationState", "CLOSE"
-                ))).get().path("code").asText().equals("200"));
+                ))).get();
 
 
         // consumer update csat survey
-        Assert.assertTrue("POST: consumer update csat failed", consumer.methods().updateConversationField(of(
+        consumer.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
                         "field", "CSATRate",
@@ -196,6 +193,7 @@ public class MessagingAgentTest {
                         "csatResolutionConfirmation",true,
                         "status","FILLED"
                 ))).get().path("code").asText().equals("200"));
+
 
         consumer.getWs().close();
         agent.getWs().close();

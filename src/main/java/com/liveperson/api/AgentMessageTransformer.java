@@ -101,14 +101,11 @@ public class AgentMessageTransformer implements MessageTransformer {
 
     @Override
     public List<JsonNode> incoming(ObjectNode msg) {
+        // TODO: add this validation to the infra layer
+        if (msg.path("code").asInt()>=400)
+            throw new RuntimeException("Error Response: "+msg);
         ObjectNode clone = msg.deepCopy();
         switch (clone.path("type").asText()) {
-            case "ams.ms.PublishEvent":
-                clone.put("type", "ms.PublishEvent");
-                break;
-            case "ams.cm.UpdateConversationField":
-                clone.put("type", "ms.UpdateConversationField");
-                break;
             case ".ams.ms.OnlineEventDistribution":
                 clone.remove("body");
                 ObjectNode newChange = ((ObjectNode) msg.path("body").deepCopy())
