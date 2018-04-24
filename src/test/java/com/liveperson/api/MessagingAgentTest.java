@@ -192,7 +192,7 @@ public class MessagingAgentTest {
                         "csatRate", 5,
                         "csatResolutionConfirmation",true,
                         "status","FILLED"
-                ))).get().path("code").asText().equals("200"));
+                ))).get().path("code").asText().equals("200");
 
 
         consumer.getWs().close();

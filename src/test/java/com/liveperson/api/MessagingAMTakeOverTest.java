@@ -30,6 +30,7 @@ import com.liveperson.api.infra.GeneralAPI;
 import com.liveperson.api.infra.ws.WebsocketService;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +47,7 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.text.IsEmptyString.isEmptyString;
 import static org.junit.Assert.assertThat;
-
+@Ignore
 public class MessagingAMTakeOverTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
     public static final String LP_USER = System.getenv("LP_USER");
@@ -65,7 +66,7 @@ public class MessagingAMTakeOverTest {
     private static String agent2Id;
     private static AgentVep agentVep;
 
-    @BeforeClass
+    //@BeforeClass
     public static void before() throws IOException {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
         ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
@@ -92,7 +93,7 @@ public class MessagingAMTakeOverTest {
 
     }
 
-    @Test
+    //@Test
     public void testAgent() throws Exception {
         WebsocketService<MessagingAgent> agent = WebsocketService.create(MessagingAgent.class, ImmutableMap.<String, String>builder()
                         .put("protocol", "wss")
