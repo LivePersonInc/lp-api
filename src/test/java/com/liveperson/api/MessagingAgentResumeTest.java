@@ -197,7 +197,7 @@ public class MessagingAgentResumeTest {
 
         // validation conversation statistics
         // wait for kpi update
-        Thread.sleep(5000); // TODO: replace with loop validation
+        Thread.sleep(10000); // TODO: replace with loop validation
         ConversationsStatistics conversationsStatistics = GeneralAPI.apiEndpoint(DOMAINS, ConversationsStatistics.class);
         JsonNode statistics = conversationsStatistics.getMsgStatistics(agentBearer, LP_ACCOUNT)
                 .execute().body();
@@ -213,7 +213,7 @@ public class MessagingAgentResumeTest {
                 ))).get().path("code").asText().equals("200"));
 
         // wait for conversation history update after close
-        Thread.sleep(5000); // TODO: replace with loop validation
+        Thread.sleep(10000); // TODO: replace with loop validation
 
         MessagingHistory messagingHistory = GeneralAPI.apiEndpoint(DOMAINS, MessagingHistory.class);
         JsonNode convHistory = messagingHistory.getConversationContent("Bearer " +consumerJwt, LP_ACCOUNT, convId)
