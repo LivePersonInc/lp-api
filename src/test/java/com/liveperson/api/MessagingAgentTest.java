@@ -188,8 +188,6 @@ public class MessagingAgentTest {
 
 
         // consumer update csat survey
-        CompletableFuture<JsonNode> agentNotification = agent.methods().onNextExConversationChangeNotification().listen();
-
         Assert.assertTrue("POST: consumer update csat failed", consumer.methods().updateConversationField(of(
                 "conversationId", convId,
                 "conversationField", of(
@@ -198,17 +196,6 @@ public class MessagingAgentTest {
                         "csatResolutionConfirmation",true,
                         "status","FILLED"
                 ))).get().path("code").asText().equals("200"));
-
-        // agent verify consumer csat rate
-        JsonNode agentNotificationResp = agentNotification.get();
-
-       /* Assert.assertTrue(agentNotificationResp.path("body").path("changes").get(0).
-                path("result").path("conversationDetails").
-                path("csat").get("csatRate").asText().equals(String.valueOf(5)));
-
-        Assert.assertTrue(agentNotificationResp.path("body").path("changes").get(0).
-                path("result").path("conversationDetails").
-                path("csat").get("status").asText().equals("FILLED"));*/
 
         consumer.getWs().close();
         agent.getWs().close();
