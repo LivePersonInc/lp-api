@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
+import retrofit2.Response;
 
 import java.io.IOException;
 import java.util.Map;
@@ -42,12 +43,11 @@ import java.util.function.Consumer;
 import static com.google.common.collect.ImmutableMap.of;
 import static com.liveperson.api.AgentMessageTransformer.*;
 import static java.util.Arrays.asList;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.text.IsEmptyString.isEmptyString;
 import static org.junit.Assert.assertThat;
 
-public class MessagingAgentTest {
+public class MessagingAgentResumeTest {
     public static final String LP_ACCOUNT = System.getenv("LP_ACCOUNT");
     public static final String LP_USER = System.getenv("LP_USER");
     public static final String LP_PASS = System.getenv("LP_PASS");
@@ -56,6 +56,7 @@ public class MessagingAgentTest {
     public static final Map<String, String> DOMAINS = GeneralAPI.getDomains(LP_DOMAINS, LP_ACCOUNT);
     public static final String HELLO = "HELLO";
     public static final String AGENT_HELLO = "GOODBYE";
+    public static final String AGENT_HELLO_RESUME = "RESUME";
     private static String consumerJwt;
     private static String agentOldId;
     private static String agentBearer;
@@ -64,7 +65,7 @@ public class MessagingAgentTest {
     @BeforeClass
     public static void before() throws IOException {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
-//        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
+        ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
 
         Idp idp = GeneralAPI.apiEndpoint(DOMAINS, Idp.class);
         consumerJwt = idp.signup(LP_ACCOUNT)
@@ -132,6 +133,15 @@ public class MessagingAgentTest {
         agent.methods().onNextMessagingEventNotification()
                 .where(msg->msg.findPath("message").asText().equals(HELLO)).listen().get();
 
+
+        // consumer subscribe and verify agent message
+        consumer.methods().subscribeMessagingEvents(of(
+                "dialogId",convId,
+                "fromSeq",0));
+
+        CompletableFuture<JsonNode> consumerListen = consumer.methods().onNextMessagingEventNotification()
+                .where(m -> m.findPath("message").asText().equals(AGENT_HELLO)).listen();
+
         // agent send message
         agent.methods().publishEvent(of(
                 "dialogId",convId,
@@ -141,58 +151,82 @@ public class MessagingAgentTest {
                         "message", AGENT_HELLO
                 )));
 
-        // consumer subscribe and verify agent message
-        consumer.methods().subscribeMessagingEvents(of(
-                "dialogId",convId,
-                "fromSeq",0));
+        // consumer verify agent message
+        consumerListen.get();
 
-        consumer.methods().onNextMessagingEventNotification()
-                .where(m -> m.findPath("message").asText().equals(AGENT_HELLO)).listen().get();
 
-        // consumer subscribe to conversation metadata changes
+        // agent close conversation
+        Assert.assertTrue("POST: agent close conversation",agent.methods().updateConversationField(of(
+                "conversationId", convId,
+                "conversationField", of(
+                        "field", "ConversationStateField",
+                        "conversationState", "CLOSE"
+                ))).get().path("code").asText().equals("200"));
+
         consumer.methods().subscribeExConversationEvents(of(
                 "minLastUpdatedTime",0,
                 "convState",asList("OPEN","CLOSE")
         ));
 
-        // consumer add notification listener
-        CompletableFuture<JsonNode> notification = consumer.methods().onNextExConversationChangeNotification().listen();
+       JsonNode notification = consumer.methods().onNextExConversationChangeNotification().listen().get();
+        String consumerId = notification.findPath("body").findPath("changes").findPath("result").findPath("conversationDetails")
+                .findPath("participants").get(0).get("id").asText();
 
-        // agent set TTR
-        agent.methods().updateConversationField(of(
-                "conversationId", convId,
-                "conversationField", of(
-                        "field", "TTRField",
-                        "ttrType", "CUSTOM",
-                        "value", 1800
-                ))).get();
+        // agent resume conversation
+        String newConvId = agent.methods().agentRequestConversation(of(
+                "channelType","MESSAGING",
+                "consumerId",consumerId
+        )).get().findPath("body").get("conversationId").asText();
 
-        // ttr conversation metadata validation
-        JsonNode ttrNotification = notification.get()
-                .path("body").path("changes").get(0)
-                .path("result").path("conversationDetails").path("ttr");
+        // agent send message
+        agent.methods().publishEvent(of(
+                "dialogId",newConvId,
+                "event",of(
+                        "type","ContentEvent",
+                        "contentType","text/plain",
+                        "message", AGENT_HELLO_RESUME
+                )));
 
-        assertThat(ttrNotification.path("value").asInt(), equalTo(1800));
-        assertThat(ttrNotification.path("ttrType").asText(), equalTo("CUSTOM"));
+        // consumer subscribe and verify agent message
+        consumer.methods().subscribeMessagingEvents(of(
+                "dialogId",newConvId,
+                "fromSeq",0));
+
+        consumer.methods().onNextMessagingEventNotification()
+                .where(m -> m.findPath("message").asText().equals(AGENT_HELLO_RESUME)).listen().get();
+
+        // validation conversation statistics
+        // wait for kpi update
+        Thread.sleep(10000); // TODO: replace with loop validation
+        ConversationsStatistics conversationsStatistics = GeneralAPI.apiEndpoint(DOMAINS, ConversationsStatistics.class);
+        JsonNode statistics = conversationsStatistics.getMsgStatistics(agentBearer, LP_ACCOUNT)
+                .execute().body();
+        // validate has 1 open conversation
+        Assert.assertTrue(statistics.get("active").asText().equals("1"));
 
         // agent close conversation
-        agent.methods().updateConversationField(of(
-                "conversationId", convId,
+        Assert.assertTrue("POST: agent close conversation",agent.methods().updateConversationField(of(
+                "conversationId", newConvId,
                 "conversationField", of(
                         "field", "ConversationStateField",
                         "conversationState", "CLOSE"
-                ))).get();
+                ))).get().path("code").asText().equals("200"));
 
+        // wait for conversation history update after close
+        Thread.sleep(10000); // TODO: replace with loop validation
 
-        // consumer update csat survey
-        consumer.methods().updateConversationField(of(
-                "conversationId", convId,
-                "conversationField", of(
-                        "field", "CSATRate",
-                        "csatRate", 5,
-                        "csatResolutionConfirmation",true,
-                        "status","FILLED"
-                ))).get().path("code").asText().equals("200");
+        MessagingHistory messagingHistory = GeneralAPI.apiEndpoint(DOMAINS, MessagingHistory.class);
+        JsonNode convHistory = messagingHistory.getConversationContent("Bearer " +consumerJwt, LP_ACCOUNT, convId)
+                .execute().body();
+
+        // validation history messages
+        Assert.assertTrue(convHistory.get("messageEventRecords").get(0).findPath("message").asText().equals(HELLO));
+        Assert.assertTrue(convHistory.get("messageEventRecords").get(1).findPath("message").asText().equals(AGENT_HELLO));
+
+        // validate has 0 open conversation
+        statistics = conversationsStatistics.getMsgStatistics(agentBearer, LP_ACCOUNT)
+                .execute().body();
+        Assert.assertTrue(statistics.get("active").asText().equals("0"));
 
 
         consumer.getWs().close();
