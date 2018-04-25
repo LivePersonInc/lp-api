@@ -66,7 +66,7 @@ public class MessagingAMTakeOverTest {
     private static String agent2Id;
     private static AgentVep agentVep;
 
-    //@BeforeClass
+    @BeforeClass
     public static void before() throws IOException {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.WARN);
         ((Logger) LoggerFactory.getLogger(WebsocketService.class)).setLevel(Level.DEBUG);
@@ -93,7 +93,7 @@ public class MessagingAMTakeOverTest {
 
     }
 
-    //@Test
+    @Test
     public void testAgent() throws Exception {
         WebsocketService<MessagingAgent> agent = WebsocketService.create(MessagingAgent.class, ImmutableMap.<String, String>builder()
                         .put("protocol", "wss")
